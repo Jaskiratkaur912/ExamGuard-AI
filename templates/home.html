@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Beautiful Bootstrap Homepage</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='homestyle.css') }}">
+</head>
+  <body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+      <div class="container">
+        <a class="navbar-brand fw-bold" href="#">Online Platform</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+            
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <header class="bg-light text-dark py-5 border-bottom">
+      <div class="container my-5">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-6">
+            <h1 class="display-4 fw-bold lh-1 mb-3" id="pop-heading">
+ <p>Secure Online 
+                Examination System </p> 
+</h1>
+            <p class="lead text-muted">Smart testing solutions backed by continuous browser tracking, dynamic countdown timers, and robust forensic logs.</p>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
+            <a href="/admin-login" class="btn btn-primary btn-lg px-4 me-md-2 d-inline-flex align-items-center justify-content-center">
+            Admin Login</a>
+  
+           <a href="/student-login" class="btn btn-primary btn-lg px-4 me-md-2 d-inline-flex align-items-center justify-content-center">
+            Student Login</a>
+</div>
+          </div>
+          <div class="col-lg-6">
+            <div class="rounded shadow-lg overflow-hidden border border-white border-opacity-10" style="height: 350px;">
+          <img src="https://ielts.net/wp-content/uploads/2024/08/online-ielts-exam-format-66abb8.jpg" 
+               alt="Online Exam Format" 
+               class="w-100 h-100" 
+               style="object-fit: cover; object-position: center;">
+        </div>
+            
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+
+    <section id="features" class="py-5 bg-dark text-white">
+  <div class="container my-5">
+    
+    <div class="text-center mb-5">
+      <h2 class="fw-bold display-5 text-gradient" style = "color: black">System Architecture</h2>
+      <p class="text-white-50">An all-in-one, secure, and monitored digital examination ecosystem.</p>
+    </div>
+    
+    <div class="row g-4 text-center">
+      
+      <div class="col-md-4">
+        <div class="p-4 border border-info rounded shadow bg-blue-card h-100">
+          <div class="mb-3 fs-1">⚙️</div>
+          <h3 class="h5 fw-bold mb-3 text-info">Core Engine</h3>
+          <p class="text-light px-2">
+            A comprehensive examination suite featuring secure student portals, dynamic question banking, precise live timers, and instantaneous automated scoring.
+          </p>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="p-4 border border-info rounded shadow bg-blue-card h-100">
+          <div class="mb-3 fs-1">🛡️</div>
+          <h3 class="h5 fw-bold mb-3 text-info">Proactive Guard</h3>
+          <p class="text-light px-2">
+            An ironclad security layer powered by JWT authentication, continuous active session tracking, and fully encrypted question delivery protocols.
+          </p>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="p-4 border border-info rounded shadow bg-blue-card h-100">
+          <div class="mb-3 fs-1">🔍</div>
+          <h3 class="h5 fw-bold mb-3 text-info">Forensic Audit</h3>
+          <p class="text-light px-2">
+            A bulletproof telemetry matrix recording real-time browser manipulation history, login metadata, and unalterable activity logs.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+    <footer class="bg-dark text-white-50 py-4 mt-auto">
+      <div class="container text-center">
+        <p class="mb-0">&copy; 2026 BrandName. All rights reserved.</p>
+      </div>
+    </footer>
+    <script>
+      const heading = document.getElementById('pop-heading');
+      const text = heading.textContent.trim();
+      heading.textContent = ''; // Clear original text
+
+      // Loop through each character
+      for (let i = 0; i < text.length; i++) {
+        const span = document.createElement('span');
+        
+        if (text[i] === ' ') {
+          span.className = 'space';
+          span.innerHTML = '&nbsp;'; // Keep spaces visible
+        } else {
+          span.className = 'char';
+          span.textContent = text[i];
+          // Stagger the delay: each letter waits 0.04 seconds longer than the last
+          span.style.animationDelay = `${i * 0.04}s`;
+        }
+        
+        heading.appendChild(span);
+      }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+  </body>
+</html>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+  </body>
+</html>

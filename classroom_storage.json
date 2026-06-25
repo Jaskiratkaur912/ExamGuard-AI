@@ -1,0 +1,27 @@
+{
+    "classrooms": [
+        {
+            "name": "applied maths",
+            "token": "M914FD"
+        }
+    ],
+    "enrollments": {
+        "student@gmail.com": [
+            "M914FD"
+        ]
+    },
+    "exams": {},
+    "results": {},
+    "activity_logs": {},
+    "recordings": {
+        "M914FD": [
+            {
+                "filename": "meet_M914FD_1782291280420.webm",
+                "timestamp": "2026-06-24 14:24",
+                "shared": false
+            }
+        ]
+    },
+    "exam_papers": {},
+    "exam_submissions": {}
+}

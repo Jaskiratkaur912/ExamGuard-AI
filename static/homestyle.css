@@ -1,0 +1,80 @@
+/* The letter animation definition */
+@keyframes letterPop {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.5);
+  }
+  70% {
+    transform: translateY(-5px) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Base class applied to every individual letter */
+.char {
+  display: inline-block;
+  opacity: 0; /* Hidden initially, turns visible during animation */
+  animation: letterPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Keeps spaces between words from shrinking */
+.space {
+  display: inline-block;
+  width: 0.25em; 
+}
+
+/* Premium Blue Glowing Card Background */
+.bg-blue-card {
+  background: linear-gradient(135deg, rgba(15, 32, 67, 0.85), rgba(30, 64, 175, 0.4));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Subtle hover pop effect */
+.bg-blue-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Makes columns uniform in height */
+.h-100 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Update this specific class in your style.css */
+.text-gradient {
+  color: #ffffff; /* Fallback text color for older browsers */
+  background: linear-gradient(45deg, #ffffff, #60a5fa) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  display: inline-block; /* Helps browsers calculate the clip area accurately */
+}
+
+/* Adds modern spacing style to the metric descriptions */
+.tracking-wider {
+  letter-spacing: 0.1em;
+}
+
+/* Vertical divider custom fix for dark layouts */
+.vr {
+  width: 1px;
+  min-height: 40px;
+}
+
+/* Custom Hover Effect for the Main Action Button */
+.btn-primary {
+  transition: all 0.3s ease-in-out !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px); /* Snaps up slightly */
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.5) !important; /* Blue glowing aura */
+}
+

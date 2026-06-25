@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ classroom.name }} | Admin Terminal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #0f172a; color: #fff; }
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(15, 32, 67, 0.6), rgba(30, 64, 175, 0.35));
+      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
+    }
+    .scroll-pane { max-height: 200px; overflow-y: auto; }
+    .status-indicator { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar glass-panel sticky-top mb-4 px-4">
+    <div class="container-fluid d-flex justify-content-between">
+      <span class="navbar-brand fw-bold text-info fs-5">⚡ Admin Environment Suite</span>
+      <a href="/admin-dashboard" class="btn btn-outline-light btn-sm px-3">&larr; Return to Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="container py-2">
+    <div class="card glass-panel text-white p-4 rounded shadow-lg mb-4">
+      <span class="badge bg-info text-dark mb-2 fw-bold align-self-start">MANAGEMENT INTERFACE: {{ classroom.token }}</span>
+      <h1 class="fw-bold text-white mb-1">{{ classroom.name }}</h1>
+      <p class="text-white-50 m-0 small">Operational data fields and student resource control tracks are loaded.</p>
+    </div>
+
+    <div class="card glass-panel p-4 rounded shadow-lg mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3" style="border-color: rgba(34, 197, 94, 0.3) !important;">
+      <div>
+        <h5 class="fw-bold text-success mb-1">🔴 Live Class Meet</h5>
+        <p class="text-white-50 small m-0">Start a live session for this classroom. Students enrolled with token <strong class="text-info">{{ classroom.token }}</strong> can join once the room is open. You control recording.</p>
+      </div>
+      <a href="/meet/{{ classroom.token }}" class="btn btn-success px-4 fw-bold shadow flex-shrink-0">Start Meet Room</a>
+    </div>
+
+    <div class="card glass-panel p-4 rounded shadow-lg mb-4" style="border-color: rgba(96, 165, 250, 0.3) !important;">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+        <div>
+          <h5 class="fw-bold text-info mb-1">📝 Exams &amp; MCQ Tests</h5>
+          <p class="text-white-50 small m-0">Upload a PDF question paper or build an MCQ test, then set when it opens for students.</p>
+        </div>
+        <button class="btn btn-info px-4 fw-bold shadow flex-shrink-0" data-bs-toggle="modal" data-bs-target="#createExamModal">+ New Exam / Test</button>
+      </div>
+
+      <div class="border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50">
+        {% if not exam_papers %}
+          <div class="p-3 text-center text-muted">No exams or tests created for this classroom yet.</div>
+        {% endif %}
+        {% for paper in exam_papers %}
+          <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white flex-wrap gap-2">
+            <span>
+              {{ '📄' if paper.type == 'pdf' else '🧩' }} <strong>{{ paper.title }}</strong>
+              <span class="badge bg-secondary text-uppercase ms-2">{{ paper.type }}</span>
+              <span class="text-white-50 small ms-2">Starts {{ paper.start_time.replace('T', ' ') }} · {{ paper.duration_minutes }} min</span>
+            </span>
+            <div class="d-flex gap-2">
+              <a href="/classroom/{{ classroom.token }}/proctor/{{ paper.id }}" class="btn btn-sm btn-outline-warning">🔍 Monitor Live</a>
+              <form action="/classroom/{{ classroom.token }}/delete-exam/{{ paper.id }}" method="POST" onsubmit="return confirm('Delete this exam permanently?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <h4 class="fw-bold text-white mb-3 fs-5 text-uppercase tracking-wider text-info">📋 Exam & Assignment Management</h4>
+    <div class="row g-3 mb-4">
+      
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-white mb-2 d-flex justify-content-between align-items-center">
+            📅 Upcoming
+            <span class="badge bg-primary text-white style="font-size:10px;">Exam</span>
+          </h6>
+          <div class="scroll-pane small text-white-50">
+            {% if not exams.upcoming %}
+              <p class="fst-italic p-1 m-0">No scheduled exams.</p>
+            {% endif %}
+            {% for item in exams.upcoming %}
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-white mb-2 d-flex justify-content-between align-items-center">
+            🚀 Assigned
+            <span class="badge bg-success text-white">Live</span>
+          </h6>
+          <div class="scroll-pane small text-white-50">
+            {% if not exams.assigned_exams %}
+              <p class="fst-italic p-1 m-0">No active allocations.</p>
+            {% endif %}
+            {% for item in exams.assigned_exams %}
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-white mb-2 d-flex justify-content-between align-items-center">
+            📝 Assignments
+            <span class="badge bg-warning text-dark">Tasks</span>
+          </h6>
+          <div class="scroll-pane small text-white-50">
+            {% if not exams.assigned_assignments %}
+              <p class="fst-italic p-1 m-0">No open tasks.</p>
+            {% endif %}
+            {% for item in exams.assigned_assignments %}
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-danger mb-2 d-flex justify-content-between align-items-center">
+            ⚠️ Deadlines
+            <span class="badge bg-danger text-white">Alert</span>
+          </h6>
+          <div class="scroll-pane small text-white-50">
+            {% if not exams.deadlines %}
+              <p class="fst-italic p-1 m-0">No immediate targets.</p>
+            {% endif %}
+            {% for item in exams.deadlines %}
+              <div class="p-2 mb-1 bg-danger bg-opacity-10 rounded border border-danger text-danger fw-bold">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card glass-panel p-4 h-100">
+          <h5 class="fw-bold text-info mb-2 fs-6 text-uppercase">📁 Question Bank (PDF Repository)</h5>
+          <p class="text-white-50 small mb-3">Upload and secure dynamic documentation resources, papers, and resource materials.</p>
+          
+          <form action="#" method="POST" enctype="multipart/form-data" class="d-flex gap-2 mb-3">
+            <input type="file" name="question_pdf" class="form-control form-control-sm bg-dark text-white border-secondary" accept=".pdf" required>
+            <button type="button" onclick="alert('File registry integrated successfully!')" class="btn btn-sm btn-info px-3 fw-bold">Upload</button>
+          </form>
+
+          <div class="scroll-pane border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50">
+            {% if not pdf_bank %}
+              <div class="p-2 text-center text-muted">No resource material PDFs deployed within this storage folder.</div>
+            {% endif %}
+            {% for pdf in pdf_bank %}
+              <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white">
+                <span>📄 {{ pdf.name }}</span>
+                <a href="#" class="text-info text-decoration-none small">Access File &darr;</a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card glass-panel p-4 h-100">
+          <h5 class="fw-bold text-warning mb-2 fs-6 text-uppercase">🔍 Live Activity Monitoring</h5>
+          <p class="text-white-50 small mb-3">System logs recording admin changes, curriculum creation, and session parameters.</p>
+          
+          <div class="scroll-pane border border-warning border-opacity-20 p-3 rounded bg-black bg-opacity-40 font-monospace text-warning small" style="height: 165px;">
+            {% if not activities %}
+              <div>[SYSTEM TELEMETRY]: Logging node silent. Waiting for network pipeline adjustments...</div>
+            {% endif %}
+            {% for act in activities %}
+              <div class="mb-1 text-truncate"><span class="text-white-50">[{{ act.timestamp }}]</span> -> {{ act.log }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="row g-4 mt-1">
+      <div class="col-12">
+        <div class="card glass-panel p-4">
+          <h5 class="fw-bold text-success mb-2 fs-6 text-uppercase">🎥 Meet Recordings</h5>
+          <p class="text-white-50 small mb-3">Recordings captured from live meet sessions for this classroom. Stored on the server until cloud storage is connected.</p>
+          <div class="scroll-pane border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50">
+            {% if not recordings %}
+              <div class="p-2 text-center text-muted">No recordings saved yet for this classroom.</div>
+            {% endif %}
+            {% for rec in recordings %}
+              <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white">
+                <span>🎬 {{ rec.filename }} <span class="text-white-50">({{ rec.timestamp }})</span></span>
+                <div class="d-flex align-items-center gap-2">
+                  <button type="button"
+                          class="btn btn-sm {{ 'btn-success' if rec.shared else 'btn-outline-secondary' }} share-rec-btn"
+                          data-token="{{ classroom.token }}" data-filename="{{ rec.filename }}">
+                    {{ 'Shared ✓' if rec.shared else 'Share with Students' }}
+                  </button>
+                  <a href="/recordings/{{ classroom.token }}/{{ rec.filename }}" class="text-success text-decoration-none small" download>Download &darr;</a>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.querySelectorAll('.share-rec-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const token = btn.dataset.token;
+        const filename = btn.dataset.filename;
+        const formData = new FormData();
+        formData.append('token', token);
+        formData.append('filename', filename);
+        try {
+          const res = await fetch('/toggle-recording-share', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.success) {
+            if (data.shared) {
+              btn.textContent = 'Shared ✓';
+              btn.classList.remove('btn-outline-secondary');
+              btn.classList.add('btn-success');
+            } else {
+              btn.textContent = 'Share with Students';
+              btn.classList.remove('btn-success');
+              btn.classList.add('btn-outline-secondary');
+            }
+          } else {
+            alert(data.message || 'Could not update sharing status.');
+          }
+        } catch (err) {
+          alert('Network error updating sharing status.');
+        }
+      });
+    });
+  </script>  <div class="modal fade" id="createExamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content text-white rounded p-3">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold text-info fs-4">Create Exam / Test</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form action="/classroom/{{ classroom.token }}/create-exam" method="POST" enctype="multipart/form-data" id="exam-create-form">
+          <div class="modal-body">
+
+            <div class="mb-3 d-flex gap-2">
+              <input type="radio" class="btn-check" name="exam_type" id="type-pdf" value="pdf" checked>
+              <label class="btn btn-outline-info flex-fill" for="type-pdf">📄 PDF Question Paper</label>
+              <input type="radio" class="btn-check" name="exam_type" id="type-mcq" value="mcq">
+              <label class="btn btn-outline-info flex-fill" for="type-mcq">🧩 MCQ Test</label>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label text-info small fw-bold text-uppercase">Exam Title</label>
+              <input type="text" name="title" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Midterm Examination" required>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label text-warning small fw-bold text-uppercase">Exam Start Date &amp; Time</label>
+                <input type="datetime-local" name="start_time" class="form-control bg-dark text-white border-secondary" required>
+                <small class="text-white-50">Students get a "get ready" alert 10 minutes before this.</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-warning small fw-bold text-uppercase">Duration (minutes)</label>
+                <input type="number" name="duration_minutes" class="form-control bg-dark text-white border-secondary" value="60" min="5" required>
+              </div>
+            </div>
+
+            <div id="pdf-upload-area" class="mb-3">
+              <label class="form-label text-info small fw-bold text-uppercase">Upload Question Paper (PDF)</label>
+              <input type="file" name="exam_pdf" accept=".pdf" class="form-control bg-dark text-white border-secondary">
+            </div>
+
+            <div id="mcq-builder-area" class="mb-3 d-none">
+              <label class="form-label text-info small fw-bold text-uppercase">MCQ Questions</label>
+              <div id="mcq-questions-list"></div>
+              <button type="button" id="add-question-btn" class="btn btn-sm btn-outline-info mt-2">+ Add Question</button>
+            </div>
+
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-info px-4 fw-bold">Create Exam</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const typePdfRadio = document.getElementById('type-pdf');
+    const typeMcqRadio = document.getElementById('type-mcq');
+    const pdfArea = document.getElementById('pdf-upload-area');
+    const mcqArea = document.getElementById('mcq-builder-area');
+    const mcqList = document.getElementById('mcq-questions-list');
+    const addQuestionBtn = document.getElementById('add-question-btn');
+    const examForm = document.getElementById('exam-create-form');
+    let questionCount = 0;
+
+    function toggleExamType() {
+      if (typeMcqRadio.checked) {
+        pdfArea.classList.add('d-none');
+        mcqArea.classList.remove('d-none');
+        document.querySelector('input[name="exam_pdf"]').removeAttribute('required');
+        if (questionCount === 0) addQuestion();
+      } else {
+        pdfArea.classList.remove('d-none');
+        mcqArea.classList.add('d-none');
+      }
+    }
+    typePdfRadio.addEventListener('change', toggleExamType);
+    typeMcqRadio.addEventListener('change', toggleExamType);
+
+    function addQuestion() {
+      const idx = questionCount++;
+      const block = document.createElement('div');
+      block.className = 'border border-secondary rounded p-3 mb-2 bg-dark bg-opacity-30';
+      block.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-info small fw-bold">Question ${idx + 1}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-q-btn">Remove</button>
+        </div>
+        <input type="text" name="question_text[]" class="form-control bg-dark text-white border-secondary mb-2" placeholder="Question text" required>
+        <div class="row g-2">
+          ${[0,1,2,3].map(o => `
+            <div class="col-md-6 d-flex align-items-center gap-2">
+              <input type="radio" name="correct_index_radio_${idx}" class="form-check-input mark-correct" data-idx="${idx}" data-opt="${o}">
+              <input type="text" name="option_${o}[]" class="form-control bg-dark text-white border-secondary" placeholder="Option ${o + 1}" required>
+            </div>
+          `).join('')}
+        </div>
+        <input type="hidden" name="correct_index[]" class="correct-index-hidden" value="0">
+        <small class="text-white-50">Select the radio button next to the correct option.</small>
+      `;
+      mcqList.appendChild(block);
+
+      block.querySelector('.remove-q-btn').addEventListener('click', () => block.remove());
+      block.querySelectorAll('.mark-correct').forEach(radio => {
+        radio.addEventListener('change', () => {
+          block.querySelector('.correct-index-hidden').value = radio.dataset.opt;
+        });
+      });
+    }
+    addQuestionBtn.addEventListener('click', addQuestion);
+  </script>
+
+</body>
+</html>

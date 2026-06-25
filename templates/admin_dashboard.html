@@ -1,0 +1,328 @@
+<!-- <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Command Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #0f172a; color: #fff; }
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(15, 32, 67, 0.6), rgba(30, 64, 175, 0.35));
+      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
+    }
+    .modal-content {
+      background: linear-gradient(135deg, #0f2043, #1e40af);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+    }
+    /* Added hover effects for interactive class cards */
+    .class-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .class-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
+      border-color: rgba(96, 165, 250, 0.6) !important;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar glass-panel sticky-top mb-4 px-4">
+    <span class="navbar-brand fw-bold text-gradient fs-4">⚙️ Core Control Architecture</span>
+    <a href="/admin-login" class="btn btn-outline-danger btn-sm px-3">Terminate Session</a>
+  </nav>
+
+  <div class="container py-4">
+    <div class="card glass-panel text-white p-5 rounded shadow-lg mb-4 text-center text-md-start">
+      <h1 class="display-4 fw-bold text-gradient mb-2">Welcome, ISHITA SINGH!</h1>
+      <p class="fs-5 text-white-50 m-0">Your secure environment session is active. Deploy educational matrices below.</p>
+    </div>
+
+    <div class="row g-4 mb-4" id="classes-grid">
+      <div class="col-md-4">
+        <div class="card glass-panel text-center p-4 h-100 d-flex flex-column align-items-center justify-content-center" role="button" data-bs-toggle="modal" data-bs-target="#createClassModal" style="cursor: pointer; transition: 0.2s; border-style: dashed !important;">
+          <div class="display-3 text-info fw-bold mb-2">+</div>
+          <h5 class="fw-bold text-white m-0">Create New Class Matrix</h5>
+        </div>
+      </div>
+      
+      </div>
+  </div>
+
+  <div class="modal fade" id="createClassModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-white rounded p-3">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold text-gradient fs-4">Initialize New Classroom</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="class-creation-form">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label text-info small fw-bold text-uppercase">Classroom Structure Name</label>
+              <input type="text" id="classroom-name" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Advanced Cybersecurity Frameworks" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-warning small fw-bold text-uppercase">Generated Entry Key Token</label>
+              <div class="input-group">
+                <input type="text" id="generated-class-code" class="form-control bg-dark text-warning border-warning fw-bold text-center" readonly>
+                <button class="btn btn-outline-warning" type="button" id="copy-token-btn">Copy</button>
+              </div>
+              <small class="form-text text-white-50 mt-2 d-block">💡 <strong>System Advice:</strong> Copy this secure 6-letter verification key to share with candidates so they can route into their designated virtual ecosystem.</small>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel Execution</button>
+            <button type="submit" class="btn btn-primary px-4">Finalize Class</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const modalElement = document.getElementById('createClassModal');
+    const bootstrapModal = new bootstrap.Modal(modalElement);
+    const codeInput = document.getElementById('generated-class-code');
+    const copyBtn = document.getElementById('copy-token-btn');
+    const classForm = document.getElementById('class-creation-form');
+    const classNameInput = document.getElementById('classroom-name');
+    const classesGrid = document.getElementById('classes-grid');
+
+    // Retrieve saved matrices from localStorage or set up empty array
+    let establishedClasses = JSON.parse(localStorage.getItem('classroom_matrices')) || [];
+
+    // Helper: generate 6 character active environment token
+    function generateToken() {
+      const secureChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let uniqueCode = '';
+      for (let i = 0; i < 6; i++) {
+        uniqueCode += secureChars.charAt(Math.floor(Math.random() * secureChars.length));
+      }
+      return uniqueCode;
+    }
+
+    // Run token generation when modal fields render
+    modalElement.addEventListener('show.bs.modal', () => {
+      codeInput.value = generateToken();
+    });
+
+    // Copy token setup
+    copyBtn.addEventListener('click', () => {
+      if (!codeInput.value) return;
+      codeInput.select();
+      navigator.clipboard.writeText(codeInput.value);
+      alert('Key token copied successfully: ' + codeInput.value);
+    });
+
+    // Render classes to the system UI grid
+    function renderClasses() {
+      // Retain the 'Create New Class Matrix' card (which is the first child element)
+      const setupCard = classesGrid.firstElementChild;
+      classesGrid.innerHTML = '';
+      classesGrid.appendChild(setupCard);
+
+      establishedClasses.forEach((cls) => {
+        const colDiv = document.createElement('div');
+        colDiv.className = 'col-md-4';
+        
+        // Dynamically creating a clickable matrix card that navigates using the token ID route
+        colDiv.innerHTML = `
+          <div class="card glass-panel p-4 h-100 d-flex flex-column justify-content-between class-card" 
+               onclick="navigateToClass('${cls.token}')">
+            <div>
+              <span class="badge bg-info text-dark mb-2 small fw-bold">${cls.token}</span>
+              <h5 class="fw-bold text-white mb-3 text-truncate">${cls.name}</h5>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <span class="text-white-50 small">Status: <span class="text-success">Active</span></span>
+              <span class="text-info small">Enter Matrix &rarr;</span>
+            </div>
+          </div>
+        `;
+        classesGrid.appendChild(colDiv);
+      });
+    }
+
+    // Handle form dispatch configurations 
+    classForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const newClass = {
+        name: classNameInput.value.trim(),
+        token: codeInput.value,
+        timestamp: Date.now()
+      };
+
+      // Push into state array & synchronize client-side local cache storage
+      establishedClasses.push(newClass);
+      localStorage.setItem('classroom_matrices', JSON.stringify(establishedClasses));
+
+      // Refresh layout visualization and reset configurations
+      renderClasses();
+      classForm.reset();
+      bootstrapModal.hide();
+    });
+
+    // Handle routing navigation configuration updates
+    window.navigateToClass = function(classToken) {
+      // Modifies routing path to target specific dashboard infrastructure dynamically
+      window.location.href = `/classroom/${classToken}`;
+    };
+
+    // Initialization routine trigger sequence
+    document.addEventListener('DOMContentLoaded', renderClasses);
+  </script>
+</body>
+</html> -->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Command Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #0f172a; color: #fff; }
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(15, 32, 67, 0.6), rgba(30, 64, 175, 0.35));
+      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
+    }
+    .modal-content {
+      background: linear-gradient(135deg, #0f2043, #1e40af);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+    }
+    .class-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .class-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+      border-color: rgba(96, 165, 250, 0.5) !important;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar glass-panel sticky-top mb-4 px-4">
+    <span class="navbar-brand fw-bold text-info fs-4">⚙️ Core Control Architecture</span>
+    <a href="/admin-login" class="btn btn-outline-danger btn-sm px-3">Terminate Session</a>
+  </nav>
+
+  <div class="container py-4">
+    <div class="card glass-panel text-white p-5 rounded shadow-lg mb-4 text-center text-md-start">
+      <h1 class="display-4 fw-bold text-gradient mb-2">Welcome, {{ admin_name }}!</h1>
+      <p class="fs-5 text-white-50 m-0">Your secure environment session is active. Deploy educational matrices below.</p>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <div class="card glass-panel text-center p-4 h-100 d-flex flex-column align-items-center justify-content-center" role="button" data-bs-toggle="modal" data-bs-target="#createClassModal" style="cursor: pointer; transition: 0.2s; border-style: dashed !important;">
+          <div class="display-3 text-info fw-bold mb-2">+</div>
+          <h5 class="fw-bold text-white m-0">Create New Class Matrix</h5>
+        </div>
+      </div>
+
+      {% for class in classrooms %}
+      <div class="col-md-4">
+        <div class="card glass-panel p-4 h-100 d-flex flex-column justify-content-between class-card" style="cursor: pointer;" onclick="window.location.href='/classroom/{{ class.token }}'">
+          <div>
+            <span class="badge bg-info text-dark mb-2 small fw-bold">{{ class.token }}</span>
+            <h5 class="fw-bold text-white mb-2 text-truncate">{{ class.name }}</h5>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <span class="text-white-50 small">Status: <span class="text-success">Active</span></span>
+            <span class="text-info small fw-bold">Enter View &rarr;</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="modal fade" id="createClassModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-white rounded p-3">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold text-info fs-4">Initialize New Classroom</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        
+        <form action="/create-classroom" method="POST">
+          <input type="hidden" name="admin_name" value="{{ admin_name }}">
+          
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label text-info small fw-bold text-uppercase">Classroom Structure Name</label>
+              <input type="text" name="class_name" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Advanced Cybersecurity Frameworks" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-warning small fw-bold text-uppercase">Generated Entry Key Token</label>
+              <div class="input-group">
+                <input type="text" id="generated-class-code" name="class_token" class="form-control bg-dark text-warning border-warning fw-bold text-center" readonly>
+                <button class="btn btn-outline-warning" type="button" id="copy-token-btn">Copy</button>
+              </div>
+              <small class="form-text text-white-50 mt-2 d-block">💡 <strong>System Advice:</strong> Copy this secure 6-letter verification key to share with candidates.</small>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel Execution</button>
+            <button type="submit" class="btn btn-primary px-4">Finalize Class</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const modalElement = document.getElementById('createClassModal');
+    const codeInput = document.getElementById('generated-class-code');
+    const copyBtn = document.getElementById('copy-token-btn');
+
+    modalElement.addEventListener('show.bs.modal', () => {
+      const secureChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let uniqueCode = '';
+      for (let i = 0; i < 6; i++) {
+        uniqueCode += secureChars.charAt(Math.floor(Math.random() * secureChars.length));
+      }
+      codeInput.value = uniqueCode;
+    });
+
+    copyBtn.addEventListener('click', () => {
+      codeInput.select();
+      navigator.clipboard.writeText(codeInput.value);
+      alert('Key token copied successfully: ' + codeInput.value);
+    });
+
+    // --- 15-MINUTE INACTIVITY LOCKOUT MONITOR ---
+(function() {
+  // 15 Minutes calculated to milliseconds: 15 * 60 * 1000
+  const INACTIVITY_TIMEOUT = 15 * 60 * 1000; 
+  let idleTimer;
+
+  function terminateSessionRedirect() {
+    alert("Session expired due to 15 minutes of inactivity. Please re-authenticate.");
+    // Force direct client redirection to clear session hooks via backend logout route
+    window.location.href = '/logout'; 
+  }
+
+  function resetIdleCountdown() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(terminateSessionRedirect, INACTIVITY_TIMEOUT);
+  }
+
+  // Monitor basic physical UI input parameters
+  window.addEventListener('load', resetIdleCountdown);
+  window.addEventListener('mousemove', resetIdleCountdown);
+  window.addEventListener('mousedown', resetIdleCountdown); 
+  window.addEventListener('keypress', resetIdleCountdown);
+  window.addEventListener('scroll', resetIdleCountdown);
+  window.addEventListener('touchstart', resetIdleCountdown);
+})();
+  </script>
+ 
+</body>
+</html>

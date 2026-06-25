@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ classroom.name }} | Student Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #0f172a; color: #fff; }
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(15, 32, 67, 0.6), rgba(30, 64, 175, 0.35));
+      backdrop-filter: blur(12px); border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar glass-panel sticky-top mb-4 px-4">
+    <div class="container-fluid d-flex justify-content-between">
+      <span class="navbar-brand fw-bold text-success fs-5">🎓 Candidate Terminal Workspace</span>
+      <a href="javascript:history.back()" class="btn btn-outline-light btn-sm px-3">&larr; Return to Stream</a>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div class="card glass-panel text-white p-5 rounded shadow-lg mb-4">
+      <span class="badge bg-success text-dark mb-2 fw-bold align-self-start">CONNECTED MODULE: {{ classroom.token }}</span>
+      <h1 class="display-5 fw-bold text-white mb-2">{{ classroom.name }}</h1>
+      <p class="fs-6 text-white-50 m-0">You are synchronized inside this lecture infrastructure layer. Announcements will load below.</p>
+    </div>
+
+    <div class="card glass-panel p-4 rounded shadow-lg mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3" style="border-color: rgba(34, 197, 94, 0.3) !important;">
+      <div>
+        <h5 class="fw-bold text-success mb-1">🔴 Live Class Meet</h5>
+        <p class="text-white-50 small m-0">Join the live session when your teacher opens the room.</p>
+      </div>
+      <a href="/meet/{{ classroom.token }}" class="btn btn-success px-4 fw-bold shadow flex-shrink-0">Join Meet Room</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-white mb-2">📅 Upcoming Exams</h6>
+          <div class="small text-white-50">
+            {% if not exams.upcoming %}
+              <p class="fst-italic p-1 m-0">No scheduled exams.</p>
+            {% endif %}
+            {% for item in exams.upcoming %}
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-white mb-2">🚀 Assigned Exams</h6>
+          <div class="small text-white-50">
+            {% if not exams.assigned_exams %}
+              <p class="fst-italic p-1 m-0">Nothing assigned yet.</p>
+            {% endif %}
+            {% for item in exams.assigned_exams %}
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-white mb-2">📝 Assignments</h6>
+          <div class="small text-white-50">
+            {% if not exams.assigned_assignments %}
+              <p class="fst-italic p-1 m-0">No open tasks.</p>
+            {% endif %}
+            {% for item in exams.assigned_assignments %}
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-3 h-100">
+          <h6 class="fw-bold text-danger mb-2">⚠️ Deadlines</h6>
+          <div class="small text-white-50">
+            {% if not exams.deadlines %}
+              <p class="fst-italic p-1 m-0">No immediate targets.</p>
+            {% endif %}
+            {% for item in exams.deadlines %}
+              <div class="p-2 mb-1 bg-danger bg-opacity-10 rounded border border-danger text-danger fw-bold">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass-panel p-4 rounded shadow-lg mb-4" style="border-color: rgba(96, 165, 250, 0.3) !important;">
+      <h5 class="fw-bold text-info mb-2">📝 Exams &amp; Tests</h5>
+      <div id="exam-list-area">
+        {% if not exam_papers %}
+          <p class="text-white-50 small fst-italic mb-0">No exams or tests have been scheduled yet.</p>
+        {% endif %}
+        {% for paper in exam_papers %}
+          <div class="exam-card p-3 mb-2 rounded border border-secondary bg-dark bg-opacity-30 d-flex justify-content-between align-items-center flex-wrap gap-2"
+               data-start="{{ paper.start_time }}" data-duration="{{ paper.duration_minutes }}"
+               data-exam-id="{{ paper.id }}" data-token="{{ classroom.token }}">
+            <div>
+              <h6 class="fw-bold text-white mb-1">{{ '📄' if paper.type == 'pdf' else '🧩' }} {{ paper.title }}</h6>
+              <small class="text-white-50">Starts {{ paper.start_time.replace('T', ' ') }} · {{ paper.duration_minutes }} minutes · {{ paper.type|upper }}</small>
+              <div class="exam-status small fw-bold mt-1 text-info">Checking schedule…</div>
+            </div>
+            <button class="btn btn-primary px-4 fw-bold enter-exam-btn" disabled>Enter Exam</button>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card glass-panel p-4 h-100">
+          <h5 class="fw-bold text-white mb-3">📁 Question Bank (Shared by Teacher)</h5>
+          <div class="border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50" style="max-height: 220px; overflow-y: auto;">
+            {% if not pdf_bank %}
+              <div class="p-2 text-center text-muted">No resource material has been shared yet.</div>
+            {% endif %}
+            {% for pdf in pdf_bank %}
+              <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white">
+                <span>📄 {{ pdf.name }}</span>
+                <a href="#" class="text-success text-decoration-none small">Open &darr;</a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card glass-panel p-4 h-100">
+          <h5 class="fw-bold text-success mb-3">🎥 Class Recordings</h5>
+          <div class="border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50" style="max-height: 220px; overflow-y: auto;">
+            {% if not recordings %}
+              <div class="p-2 text-center text-muted">No recordings have been shared yet.</div>
+            {% endif %}
+            {% for rec in recordings %}
+              <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white">
+                <span>🎬 {{ rec.filename }} <span class="text-white-50">({{ rec.timestamp }})</span></span>
+                <a href="/recordings/{{ classroom.token }}/{{ rec.filename }}" class="text-success text-decoration-none small" download>Download &darr;</a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- EXAM COUNTDOWN, 10-MINUTE PRE-EXAM ALERT, AND ENTRY UNLOCK ---
+    const examCards = document.querySelectorAll('.exam-card');
+    const alertedExams = new Set(); // avoid repeating the 10-min alert every tick
+
+    function formatRemaining(ms) {
+      const totalSec = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      return (h > 0 ? `${h}h ` : '') + `${m}m ${s}s`;
+    }
+
+    function tickExams() {
+      const now = new Date();
+      examCards.forEach(card => {
+        const start = new Date(card.dataset.start);
+        const durationMs = parseInt(card.dataset.duration, 10) * 60 * 1000;
+        const end = new Date(start.getTime() + durationMs);
+        const statusEl = card.querySelector('.exam-status');
+        const btn = card.querySelector('.enter-exam-btn');
+        const examId = card.dataset.examId;
+
+        if (now < start) {
+          const msToStart = start - now;
+          statusEl.textContent = `Opens in ${formatRemaining(msToStart)}`;
+          statusEl.className = 'exam-status small fw-bold mt-1 text-info';
+          btn.disabled = true;
+          btn.textContent = 'Not Yet Open';
+
+          // 10-minute "get ready" alert — fires once per exam per page load
+          if (msToStart <= 10 * 60 * 1000 && !alertedExams.has(examId)) {
+            alertedExams.add(examId);
+            statusEl.textContent = `⚠️ Starting soon — get ready! Opens in ${formatRemaining(msToStart)}`;
+            statusEl.className = 'exam-status small fw-bold mt-1 text-warning';
+            showGetReadyBanner(card.querySelector('h6').textContent.trim(), msToStart);
+          }
+        } else if (now >= start && now <= end) {
+          statusEl.textContent = `🟢 Live now — ${formatRemaining(end - now)} remaining`;
+          statusEl.className = 'exam-status small fw-bold mt-1 text-success';
+          btn.disabled = false;
+          btn.textContent = 'Enter Exam';
+        } else {
+          statusEl.textContent = 'This exam window has closed.';
+          statusEl.className = 'exam-status small fw-bold mt-1 text-danger';
+          btn.disabled = true;
+          btn.textContent = 'Closed';
+        }
+      });
+    }
+
+    function showGetReadyBanner(title, msToStart) {
+      const banner = document.createElement('div');
+      banner.className = 'alert alert-warning fw-bold position-fixed top-0 start-50 translate-middle-x mt-3 shadow-lg';
+      banner.style.zIndex = 2000;
+      banner.textContent = `⏰ "${title}" starts in about ${formatRemaining(msToStart)}. Please close other windows, ensure your camera works, and get ready.`;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 12000);
+    }
+
+    document.querySelectorAll('.enter-exam-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.exam-card');
+        window.location.href = `/exam/${card.dataset.token}/${card.dataset.examId}`;
+      });
+    });
+
+    tickExams();
+    setInterval(tickExams, 1000);
+  </script>
+</body>
+</html>
