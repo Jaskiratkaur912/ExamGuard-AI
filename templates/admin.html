@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal Secure Access</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body { background-color: #0f172a; }
+    .login-card {
+      background: linear-gradient(135deg, rgba(15, 32, 67, 0.9), rgba(30, 64, 175, 0.55));
+      backdrop-filter: blur(10px); border: 1px solid rgba(96, 165, 250, 0.3) !important;
+    }
+  </style>
+</head>
+<body class="text-white d-flex align-items-center justify-content-center vh-100">
+  <div class="card login-card p-5 rounded shadow-lg" style="width: 100%; max-width: 420px;">
+    
+    <h3 class="text-center mb-2 fw-bold text-gradient" id="portal-title" style="color: white">LOGIN HERE</h3>
+    <p class="text-center text-white-50 small mb-4" id="portal-subtitle">Secure Administration Access Panel</p>
+    
+    <form id="auth-form" method="POST" autocomplete="off">
+      <input type="hidden" name="login_mode" id="login_mode" value="password">
+
+      <div class="mb-3">
+  <label class="form-label text-info small fw-bold text-uppercase tracking-wider">Full Name</label>
+  <input type="text" name="full_name" id="name-input" class="form-control bg-dark text-white border-secondary py-2" placeholder="e.g. Ishita Singh" autocomplete="none" required>
+</div>
+
+
+
+  <div class="mb-3">
+        <label class="form-label text-info small fw-bold text-uppercase tracking-wider">User Gmail</label>
+        <input type="email" name="identity" id="identity-input" class="form-control bg-dark text-white border-secondary py-2" placeholder="user@gmail.com" autocomplete="none" required>
+  </div>
+
+      <div class="mb-4" id="password-area">
+  <label class="form-label text-info small fw-bold text-uppercase tracking-wider">Access Password</label>
+  <div class="input-group">
+    <input type="password" name="password" id="password-input" class="form-control bg-dark text-white border-secondary py-2" placeholder="••••••••" autocomplete="new-password">
+    <button class="btn btn-outline-secondary border-secondary bg-dark text-white-50" type="button" id="toggle-password-visibility">
+      👁️
+    </button>
+  </div>
+  <div class="text-end mt-1">
+    <a href="#" id="forgot-link" class="text-info small text-decoration-none">Forgot Password? Use OTP</a>
+  </div>
+</div>
+
+      <div class="mb-4 d-none" id="otp-area">
+        <label class="form-label text-warning small fw-bold text-uppercase tracking-wider">One-Time Security Token</label>
+        <div class="input-group">
+          <input type="text" name="otp" class="form-control bg-dark text-white border-secondary py-2" placeholder="6-Digit Token">
+          <button class="btn btn-outline-warning" type="button" id="request-otp-btn">Send OTP</button>
+        </div>
+        <div class="text-end mt-1">
+          <a href="#" id="back-to-pass-link" class="text-info small text-decoration-none">Back to Password Login</a>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary btn-lg w-100 fs-6 fw-bold shadow">Authorize Entry</button>
+    </form>
+    
+    <div class="text-center mt-4">
+      <a href="/" class="text-white-50 small text-decoration-none">← Return to Home</a>
+    </div>
+  </div>
+
+  <script>
+    const forgotLink = document.getElementById('forgot-link');
+    const backToPassLink = document.getElementById('back-to-pass-link');
+    const passwordArea = document.getElementById('password-area');
+    const otpArea = document.getElementById('otp-area');
+    const loginMode = document.getElementById('login_mode');
+    const requestOtpBtn = document.getElementById('request-otp-btn');
+    const identityInput = document.getElementById('identity-input');
+    const passwordInput = document.getElementById('password-input');
+
+    // Toggle to OTP View
+    forgotLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      passwordArea.classList.add('d-none');
+      otpArea.classList.remove('d-none');
+      loginMode.value = 'otp';
+      passwordInput.removeAttribute('required');
+    });
+
+    // Toggle back to Password View
+    backToPassLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      otpArea.classList.add('d-none');
+      passwordArea.classList.remove('d-none');
+      loginMode.value = 'password';
+      passwordInput.setAttribute('required', '');
+    });
+
+    // Handle AJAX dynamic async request to Python for OTP dispatching
+requestOtpBtn.addEventListener('click', () => {
+  if (!identityInput.value) {
+     alert('Please enter your Gmail address first.');
+     return;
+  }
+  
+  // Create the payload matching exactly what the backend expects
+  const formData = new FormData();
+  formData.append('email', identityInput.value);
+
+  // Send request to our Flask server
+  fetch('/send-otp', { 
+      method: 'POST', 
+      body: formData 
+  })
+  .then(res => res.json())
+  .then(data => {
+      alert(data.message);
+  }).catch(err => {
+      alert('Error generating secure token string.');
+  });
+});
+    const togglePasswordBtn = document.getElementById('toggle-password-visibility');
+
+togglePasswordBtn.addEventListener('click', () => {
+  // Check the current state of the input type attribute
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text';      // Reveals the raw characters
+    togglePasswordBtn.textContent = '🙈'; // Changes icon to signify hiding next
+  } else {
+    passwordInput.type = 'password';  // Conceals it back to bullets
+    togglePasswordBtn.textContent = '👁️'; // Changes icon back to looking eye
+  }
+});
+  </script>
+</body>
+</html>

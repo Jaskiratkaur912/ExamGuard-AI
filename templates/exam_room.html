@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ paper.title }} | Exam Room</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    html, body { background-color: #0f172a; color: #fff; height: 100%; overflow: hidden; }
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(15, 32, 67, 0.75), rgba(30, 64, 175, 0.4));
+      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
+    }
+    #gate-screen {
+      position: fixed; inset: 0; z-index: 3000;
+      background: #0f172a; display: flex; align-items: center; justify-content: center;
+    }
+    #exam-screen { display: none; height: 100vh; flex-direction: column; }
+    #cam-corner {
+      position: fixed; bottom: 16px; right: 16px; width: 160px; z-index: 1500;
+      border-radius: 10px; overflow: hidden; border: 2px solid rgba(96, 165, 250, 0.5);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    #cam-corner video { width: 100%; display: block; }
+    #cam-status-badge {
+      position: absolute; bottom: 4px; left: 4px; right: 4px;
+      font-size: 0.65rem; text-align: center; padding: 2px 0; border-radius: 4px;
+      background: rgba(0,0,0,0.6);
+    }
+    .timer-display { font-family: monospace; font-size: 1.4rem; }
+    #pdf-frame { width: 100%; height: 100%; border: none; background: #fff; }
+    #warning-toast {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 2500; max-width: 92%;
+    }
+    .question-block { background: rgba(15,32,67,0.5); border: 1px solid rgba(96,165,250,0.2); border-radius: 10px; }
+    .option-label { cursor: pointer; display: block; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 6px; }
+    .option-label:hover { background: rgba(96,165,250,0.1); }
+    input[type="radio"]:checked + .option-text { color: #60a5fa; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div id="gate-screen">
+    <div class="card glass-panel p-5 rounded shadow-lg text-center" style="max-width: 540px;">
+      <h3 class="fw-bold text-info mb-2">{{ paper.title }}</h3>
+      <p class="text-white-50 mb-4">Before the exam paper appears, we need to confirm your setup.</p>
+
+      <div class="text-start small mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded bg-dark bg-opacity-40">
+          <span id="step-fullscreen-label">1. Enter fullscreen mode</span>
+          <span id="step-fullscreen-status" class="text-warning">Pending</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded bg-dark bg-opacity-40">
+          <span id="step-camera-label">2. Allow camera access</span>
+          <span id="step-camera-status" class="text-warning">Pending</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded bg-dark bg-opacity-40">
+          <span id="step-face-label">3. Face clearly visible</span>
+          <span id="step-face-status" class="text-warning">Pending</span>
+        </div>
+      </div>
+
+      <div id="gate-camera-preview" class="mb-3 d-none">
+        <video id="gate-video" autoplay playsinline muted style="width: 100%; max-width: 320px; border-radius: 10px;"></video>
+      </div>
+
+      <p class="text-white-50 small mb-3">
+        Keep your face centered in the frame, sit in a quiet, well-lit space, and make sure no
+        one else is visible on camera. Exiting fullscreen or losing face visibility during the
+        exam will be flagged.
+      </p>
+
+      <button id="start-checks-btn" class="btn btn-primary btn-lg px-5 fw-bold shadow">Begin Setup Check</button>
+      <p id="gate-error" class="text-danger small mt-3 mb-0 d-none"></p>
+    </div>
+  </div>
+
+  <div id="exam-screen">
+    <nav class="navbar glass-panel px-4 d-flex justify-content-between">
+      <span class="navbar-brand fw-bold text-info fs-6 m-0">{{ paper.title }}</span>
+      <div class="d-flex align-items-center gap-4">
+        <span class="text-white-50 small">Violations logged: <span id="violation-count" class="text-warning fw-bold">0</span></span>
+        <span class="timer-display text-warning" id="timer-display">--:--:--</span>
+        <button class="btn btn-success btn-sm px-4 fw-bold" id="submit-exam-btn">Submit Exam</button>
+      </div>
+    </nav>
+
+    <div class="flex-grow-1" id="exam-content-container" data-paper-type="{{ paper.type }}" style="overflow-y: auto;">
+      {% if paper.type == 'pdf' %}
+        <iframe id="pdf-frame" src="/exam-paper-file/{{ token }}/{{ paper.id }}"></iframe>
+      {% else %}
+        <div class="container py-4" style="max-width: 760px;">
+          {% for q in paper.questions %}
+          <div class="question-block p-4 mb-3">
+            <h6 class="fw-bold text-white mb-3">Q{{ loop.index }}. {{ q.question }}</h6>
+            {% for opt in q.options %}
+            <label class="option-label">
+              <input type="radio" name="q{{ loop.index0 }}" value="{{ loop.index0 }}" class="form-check-input me-2" data-qindex="{{ loop.index0 }}">
+              <span class="option-text">{{ opt }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="cam-corner" class="d-none">
+    <video id="proctor-video" autoplay playsinline muted></video>
+    <div id="cam-status-badge" class="text-success">Face detected</div>
+  </div>
+
+  <div id="warning-toast"></div>
+
+  <div id="exam-metadata" 
+       data-token="{{ token }}" 
+       data-exam-id="{{ paper.id }}" 
+       data-duration="{{ paper.duration_minutes }}">
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <script>
+    // Safe extraction from dataset variables eliminates pure JavaScript IDE compilation errors
+    const metaEl = document.getElementById('exam-metadata');
+    const TOKEN = metaEl.dataset.token;
+    const EXAM_ID = metaEl.dataset.examId;
+    const DURATION_MIN = parseInt(metaEl.dataset.duration || "0", 10);
+
+    const gateScreen = document.getElementById('gate-screen');
+    const examScreen = document.getElementById('exam-screen');
+    const gateVideo = document.getElementById('gate-video');
+    const gateCameraPreview = document.getElementById('gate-camera-preview');
+    const startChecksBtn = document.getElementById('start-checks-btn');
+    const gateError = document.getElementById('gate-error');
+
+    let violationCount = 0;
+    let examSubmitted = false;
+    let stream = null;
+    let modelsReady = false;
+
+    function setStep(stepId, statusId, ok, label) {
+      document.getElementById(statusId).textContent = label;
+      document.getElementById(statusId).className = ok ? 'text-success' : 'text-warning';
+    }
+
+    function showToast(message, level = 'warning') {
+      const toast = document.createElement('div');
+      toast.className = `alert alert-${level} fw-bold shadow-lg mb-2`;
+      toast.textContent = message;
+      document.getElementById('warning-toast').appendChild(toast);
+      setTimeout(() => toast.remove(), 6000);
+    }
+
+    async function logViolation(reason) {
+      violationCount++;
+      document.getElementById('violation-count').textContent = violationCount;
+      showToast(`⚠️ ${reason}`, 'danger');
+      try {
+        await fetch(`/exam/${TOKEN}/${EXAM_ID}/flag`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
+      } catch (e) { /* best-effort fallback */ }
+      violationLog.push({ reason, time: new Date().toISOString() });
+    }
+
+    const violationLog = [];
+
+    // --- STEP 1: FULLSCREEN ---
+    async function requestFullscreen() {
+      try {
+        await document.documentElement.requestFullscreen();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // --- STEP 2: CAMERA ---
+    async function requestCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        gateVideo.srcObject = stream;
+        gateCameraPreview.classList.remove('d-none');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // --- STEP 3: FACE CHECK (face-api.js) ---
+    async function loadFaceModels() {
+      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      modelsReady = true;
+    }
+
+    async function confirmFaceVisible() {
+      if (!modelsReady) await loadFaceModels();
+      await new Promise(r => setTimeout(r, 600));
+      const detection = await faceapi.detectSingleFace(gateVideo, new faceapi.TinyFaceDetectorOptions());
+      return !!detection;
+    }
+
+    startChecksBtn.addEventListener('click', async () => {
+      gateError.classList.add('d-none');
+      startChecksBtn.disabled = true;
+      startChecksBtn.textContent = 'Checking…';
+
+      const fsOk = await requestFullscreen();
+      setStep('step-fullscreen-label', 'step-fullscreen-status', fsOk, fsOk ? 'Done' : 'Failed');
+      if (!fsOk) {
+        gateError.textContent = 'Fullscreen permission is required to start the exam. Please allow it and try again.';
+        gateError.classList.remove('d-none');
+        startChecksBtn.disabled = false;
+        startChecksBtn.textContent = 'Begin Setup Check';
+        return;
+      }
+
+      const camOk = await requestCamera();
+      setStep('step-camera-label', 'step-camera-status', camOk, camOk ? 'Done' : 'Failed');
+      if (!camOk) {
+        gateError.textContent = 'Camera access is required for proctoring. Please allow camera permission and try again.';
+        gateError.classList.remove('d-none');
+        startChecksBtn.disabled = false;
+        startChecksBtn.textContent = 'Begin Setup Check';
+        return;
+      }
+
+      document.getElementById('step-face-status').textContent = 'Detecting…';
+      const faceOk = await confirmFaceVisible();
+      setStep('step-face-label', 'step-face-status', faceOk, faceOk ? 'Done' : 'No face found');
+      if (!faceOk) {
+        gateError.textContent = 'We could not detect your face clearly. Improve lighting and center your face in frame, then try again.';
+        gateError.classList.remove('d-none');
+        startChecksBtn.disabled = false;
+        startChecksBtn.textContent = 'Begin Setup Check';
+        return;
+      }
+
+      enterExam();
+    });
+
+    function enterExam() {
+      gateScreen.style.display = 'none';
+      examScreen.style.display = 'flex';
+
+      const proctorVideo = document.getElementById('proctor-video');
+      proctorVideo.srcObject = stream;
+      document.getElementById('cam-corner').classList.remove('d-none');
+
+      startExamTimer();
+      startProctoringLoop();
+      attachIntegrityListeners();
+    }
+
+    // --- TIMER ---
+    function startExamTimer() {
+      const endTime = Date.now() + DURATION_MIN * 60 * 1000;
+      const display = document.getElementById('timer-display');
+      const tick = () => {
+        const remaining = endTime - Date.now();
+        if (remaining <= 0) {
+          display.textContent = '00:00:00';
+          if (!examSubmitted) finishExam(true);
+          return;
+        }
+        const h = String(Math.floor(remaining / 3600000)).padStart(2, '0');
+        const m = String(Math.floor((remaining % 3600000) / 60000)).padStart(2, '0');
+        const s = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+        display.textContent = `${h}:${m}:${s}`;
+        setTimeout(tick, 1000);
+      };
+      tick();
+    }
+
+    // --- CONTINUOUS FACE / GAZE MONITORING ---
+    let noFaceStreak = 0;
+    let lastFaceAlertAt = 0;
+
+    async function startProctoringLoop() {
+      const video = document.getElementById('proctor-video');
+      const badge = document.getElementById('cam-status-badge');
+
+      setInterval(async () => {
+        if (examSubmitted) return;
+        try {
+          const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
+
+          if (detections.length === 0) {
+            noFaceStreak++;
+            badge.textContent = 'No face detected';
+            badge.parentElement.style.borderColor = '#ef4444';
+            if (noFaceStreak >= 3 && Date.now() - lastFaceAlertAt > 8000) {
+              lastFaceAlertAt = Date.now();
+              logViolation('No face detected in camera frame.');
+            }
+          } else if (detections.length > 1) {
+            noFaceStreak = 0;
+            badge.textContent = `${detections.length} faces detected`;
+            badge.parentElement.style.borderColor = '#ef4444';
+            if (Date.now() - lastFaceAlertAt > 8000) {
+              lastFaceAlertAt = Date.now();
+              logViolation('Multiple faces detected in camera frame.');
+            }
+          } else {
+            noFaceStreak = 0;
+            badge.textContent = 'Face detected';
+            badge.parentElement.style.borderColor = 'rgba(96, 165, 250, 0.5)';
+
+            const box = detections[0].box;
+            const frameW = video.videoWidth || 320;
+            const centerX = box.x + box.width / 2;
+            const offsetRatio = Math.abs(centerX - frameW / 2) / (frameW / 2);
+            if (offsetRatio > 0.45) {
+              if (Date.now() - lastFaceAlertAt > 8000) {
+                lastFaceAlertAt = Date.now();
+                logViolation('Significant head turn away from screen detected.');
+              }
+            }
+          }
+        } catch (e) { /* silent catch for model sync pauses */ }
+      }, 2000);
+    }
+
+    // --- TAB SWITCH / FULLSCREEN EXIT DETECTION ---
+    function attachIntegrityListeners() {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && !examSubmitted) {
+          logViolation('Student switched tabs or minimized the window.');
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && !examSubmitted) {
+          logViolation('Student exited fullscreen mode.');
+          showToast('You exited fullscreen. Please return to fullscreen to continue your exam.', 'danger');
+        }
+      });
+
+      window.addEventListener('blur', () => {
+        if (!examSubmitted) logViolation('Browser window lost focus.');
+      });
+    }
+
+    // --- SUBMIT ---
+    document.getElementById('submit-exam-btn').addEventListener('click', () => {
+      if (confirm('Submit the exam now? You cannot change answers after submitting.')) {
+        finishExam(false);
+      }
+    });
+
+    async function finishExam(autoSubmitted) {
+      examSubmitted = true;
+      const answers = {};
+      
+      const container = document.getElementById('exam-content-container');
+      if (container && container.dataset.paperType === 'mcq') {
+        document.querySelectorAll('input[type=radio]:checked').forEach(input => {
+          answers[input.dataset.qindex] = input.value;
+        });
+      }
+
+      try {
+        const res = await fetch(`/exam/${TOKEN}/${EXAM_ID}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers, violations: violationLog })
+        });
+        const data = await res.json();
+        let msg = autoSubmitted ? 'Time is up. Your exam was submitted automatically.' : 'Your exam has been submitted.';
+        if (data.score !== null && data.score !== undefined) {
+          msg += ` Score: ${data.score}/${data.total}`;
+        }
+        alert(msg);
+      } catch (e) {
+        alert('Your exam answers could not be sent to the server. Please contact your instructor immediately and do not close this tab.');
+        examSubmitted = false;
+        return;
+      }
+
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      window.location.href = `/student/classroom/${TOKEN}`;
+    }
+
+    window.addEventListener('beforeunload', (e) => {
+      if (!examSubmitted) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+  </script>
+</body>
+</html>
