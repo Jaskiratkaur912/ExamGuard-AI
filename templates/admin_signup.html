@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Sign Up</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:#0f172a;}
+    .login-card{background:linear-gradient(135deg,rgba(15,32,67,.9),rgba(30,64,175,.55));backdrop-filter:blur(10px);border:1px solid rgba(96,165,250,.3)!important;}
+  </style>
+</head>
+<body class="text-white d-flex align-items-center justify-content-center vh-100">
+<div class="card login-card p-5 rounded shadow-lg" style="width:100%;max-width:420px;">
+  <h3 class="text-center mb-2 fw-bold" style="color:white">CREATE ADMIN ACCOUNT</h3>
+  <p class="text-center text-white-50 small mb-4">Register a new administrator profile</p>
+  {% if error %}<div class="alert alert-danger small py-2">⚠️ {{ error }}</div>{% endif %}
+  <form method="POST" autocomplete="off">
+    <div class="mb-3">
+      <label class="form-label text-info small fw-bold text-uppercase">Full Name</label>
+      <input type="text" name="full_name" value="{{ full_name or '' }}" class="form-control bg-dark text-white border-secondary py-2" placeholder="e.g. Ishita Singh" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label text-info small fw-bold text-uppercase">Gmail Address</label>
+      <input type="email" name="identity" value="{{ identity or '' }}" class="form-control bg-dark text-white border-secondary py-2" placeholder="user@gmail.com" required>
+    </div>
+    <div class="mb-4">
+      <label class="form-label text-info small fw-bold text-uppercase">Password</label>
+      <div class="input-group">
+        <input type="password" name="password" id="pw" class="form-control bg-dark text-white border-secondary py-2" placeholder="••••••••" required>
+        <button class="btn btn-outline-secondary bg-dark text-white-50" type="button" onclick="let i=document.getElementById('pw');i.type=i.type==='password'?'text':'password'">👁️</button>
+      </div>
+      <small class="text-white-50">Max 20 chars · uppercase · number · special char</small>
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">Create Account</button>
+  </form>
+  <div class="text-center mt-4">
+    <a href="/admin-login" class="text-info small text-decoration-none">Already have an account? Log in</a>
+    &nbsp;·&nbsp;<a href="/" class="text-white-50 small text-decoration-none">← Home</a>
+  </div>
+</div>
+</body></html>
