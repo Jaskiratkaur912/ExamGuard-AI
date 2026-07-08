@@ -1,27 +1,206 @@
 {
-    "classrooms": [
-        {
-            "name": "applied maths",
-            "token": "M914FD"
-        }
+  "users": {
+    "ishitasingh.98187@gmail.com": {
+      "full_name": "Ishita Singh",
+      "password": "scrypt:32768:8:1$vGmuWwIKcgVSMnjk$fa009e69fcaf8f17e57275b38cd3680f3367a53575954b3567feb0e69ae7f50bf8fce566111345a4802c60b458f54204235cc81196f5f7bd5914fb866b19a777",
+      "role": "admin",
+      "otp": null
+    },
+    "ishita.049@gmail.com": {
+      "full_name": "Ishita Singh",
+      "password": "scrypt:32768:8:1$2N7VOLgJOiP5BTxB$43a3eb32ab03bc7b2985091bcc9dc5f65eb9f55a24cfe6ba7545f700ddc765abe4654db6a3098ddc6b05f355e7946b85ef7b516796aa517fd45d8a0ca97b5833",
+      "role": "student",
+      "otp": null
+    },
+    "admin@gmail.com": {
+      "full_name": "Ishita Singh",
+      "password": "scrypt:32768:8:1$h5YQLQy0rGuRHdUc$096d70ff195ef5b8e7efae5a4c58dc2ef791fbf0c8e2c0b779890629eb7fcd55b4a5842f5625fc00df4c80e66597192fb3cd55c49766d07393f62a68ddc90b38",
+      "role": "admin",
+      "otp": null
+    },
+    "ishh@gmail.com": {
+      "full_name": "Ishita Singh",
+      "password": "scrypt:32768:8:1$sgwKKTNbvgQscOds$73ba46b2c6d9092299c3201510777f8bf62699d97530f32e9c8953ae534a29410d360eac66d430a2e68225664df0bbb589d5ff8254d92c416a37deb64f2df3f0",
+      "role": "admin",
+      "otp": null
+    },
+    "varun@gmail.com": {
+      "full_name": "varun",
+      "password": "scrypt:32768:8:1$5YAuxX7fd45hjNop$3b6140fca7a4ecab479d7cb62693f4dbc6f06650f6b01da00af690533145dd266ebb63f15b02003014c3356c9be75edad616910f9888e382ae5758353e810db8",
+      "role": "student",
+      "otp": null
+    }
+  },
+  "classrooms": [
+    {
+      "name": "applied maths",
+      "token": "M914FD"
+    },
+    {
+      "name": "WAD",
+      "token": "3DGZYC",
+      "owner_email": "ishitasingh.98187@gmail.com"
+    },
+    {
+      "name": "python",
+      "token": "5G6MLT",
+      "owner_email": "ishh@gmail.com"
+    }
+  ],
+  "enrollments": {
+    "student@gmail.com": [
+      "M914FD"
     ],
-    "enrollments": {
-        "student@gmail.com": [
-            "M914FD"
-        ]
-    },
-    "exams": {},
-    "results": {},
-    "activity_logs": {},
-    "recordings": {
-        "M914FD": [
-            {
-                "filename": "meet_M914FD_1782291280420.webm",
-                "timestamp": "2026-06-24 14:24",
-                "shared": false
-            }
-        ]
-    },
-    "exam_papers": {},
-    "exam_submissions": {}
+    "ishita.049@gmail.com": [
+      "3DGZYC"
+    ],
+    "varun@gmail.com": [
+      "3DGZYC"
+    ]
+  },
+  "exams": {
+    "3DGZYC": {
+      "upcoming": [],
+      "assigned_exams": [],
+      "assigned_assignments": [],
+      "deadlines": []
+    }
+  },
+  "results": {},
+  "activity_logs": {
+    "3DGZYC": [
+      {
+        "timestamp": "2026-07-08 16:10:42",
+        "log": "Classroom created by ishitasingh.98187@gmail.com"
+      },
+      {
+        "timestamp": "2026-07-08 17:11:18",
+        "log": "Student ishita.049@gmail.com joined the classroom"
+      },
+      {
+        "timestamp": "2026-07-08 23:11:55",
+        "log": "Student varun@gmail.com joined the classroom"
+      }
+    ],
+    "5G6MLT": [
+      {
+        "timestamp": "2026-07-08 22:32:11",
+        "log": "Classroom created by ishh@gmail.com"
+      }
+    ]
+  },
+  "recordings": {
+    "M914FD": [
+      {
+        "filename": "meet_M914FD_1782291280420.webm",
+        "timestamp": "2026-06-24 14:24",
+        "shared": false
+      }
+    ]
+  },
+  "exam_papers": {},
+  "exam_submissions": {},
+  "login_history": {
+    "ishitasingh.98187@gmail.com": [
+      {
+        "event": "signup+login",
+        "timestamp": "2026-07-08 16:10:15",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 17:11:43",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 19:53:43",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 20:40:38",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 22:25:35",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 23:09:58",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      }
+    ],
+    "ishita.049@gmail.com": [
+      {
+        "event": "signup+login",
+        "timestamp": "2026-07-08 17:10:55",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 19:55:41",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 20:41:46",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 23:04:15",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 23:11:19",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      }
+    ],
+    "admin@gmail.com": [
+      {
+        "event": "failed_login",
+        "timestamp": "2026-07-08 22:26:49",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      {
+        "event": "login",
+        "timestamp": "2026-07-08 22:27:46",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      }
+    ],
+    "ishh@gmail.com": [
+      {
+        "event": "signup+login",
+        "timestamp": "2026-07-08 22:28:42",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      }
+    ],
+    "varun@gmail.com": [
+      {
+        "event": "signup+login",
+        "timestamp": "2026-07-08 23:11:50",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      }
+    ]
+  },
+  "browser_events": {}
 }
