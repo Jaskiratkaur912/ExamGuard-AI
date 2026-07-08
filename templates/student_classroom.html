@@ -25,8 +25,9 @@
   <div class="container py-4">
     <div class="card glass-panel text-white p-5 rounded shadow-lg mb-4">
       <span class="badge bg-success text-dark mb-2 fw-bold align-self-start">CONNECTED MODULE: {{ classroom.token }}</span>
-      <h1 class="display-5 fw-bold text-white mb-2">{{ classroom.name }}</h1>
-      <p class="fs-6 text-white-50 m-0">You are synchronized inside this lecture infrastructure layer. Announcements will load below.</p>
+      <h1 class="display-5 fw-bold text-white mb-1">Welcome, {{ student_name }}!</h1>
+      <h4 class="fw-bold text-success mb-2">{{ classroom.name }}</h4>
+      <p class="fs-6 text-white-50 m-0">You are synchronized inside this classroom. Your exams, assignments, and announcements are shown below.</p>
     </div>
 
     <div class="card glass-panel p-4 rounded shadow-lg mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3" style="border-color: rgba(34, 197, 94, 0.3) !important;">
@@ -40,52 +41,60 @@
     <div class="row g-3 mb-4">
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-white mb-2">📅 Upcoming Exams</h6>
-          <div class="small text-white-50">
+          <h6 class="fw-bold text-info mb-2 d-flex align-items-center gap-1">📅 Upcoming Exams
+            {% if exams.upcoming %}<span class="badge bg-info text-dark ms-auto">{{ exams.upcoming|length }}</span>{% endif %}
+          </h6>
+          <div class="small" style="max-height:180px;overflow-y:auto;">
             {% if not exams.upcoming %}
-              <p class="fst-italic p-1 m-0">No scheduled exams.</p>
+              <p class="fst-italic text-white-50 p-1 m-0">No upcoming exams yet.</p>
             {% endif %}
             {% for item in exams.upcoming %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-info border-opacity-25 text-white lh-sm">{{ item }}</div>
             {% endfor %}
           </div>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-white mb-2">🚀 Assigned Exams</h6>
-          <div class="small text-white-50">
+          <h6 class="fw-bold text-success mb-2 d-flex align-items-center gap-1">🚀 Active Exams
+            {% if exams.assigned_exams %}<span class="badge bg-success text-dark ms-auto">{{ exams.assigned_exams|length }}</span>{% endif %}
+          </h6>
+          <div class="small" style="max-height:180px;overflow-y:auto;">
             {% if not exams.assigned_exams %}
-              <p class="fst-italic p-1 m-0">Nothing assigned yet.</p>
+              <p class="fst-italic text-white-50 p-1 m-0">No live exams right now.</p>
             {% endif %}
             {% for item in exams.assigned_exams %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+              <div class="p-2 mb-1 bg-success bg-opacity-10 rounded border border-success border-opacity-25 text-success fw-bold lh-sm">{{ item }}</div>
             {% endfor %}
           </div>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-white mb-2">📝 Assignments</h6>
-          <div class="small text-white-50">
+          <h6 class="fw-bold text-warning mb-2 d-flex align-items-center gap-1">📝 Assignments
+            {% if exams.assigned_assignments %}<span class="badge bg-warning text-dark ms-auto">{{ exams.assigned_assignments|length }}</span>{% endif %}
+          </h6>
+          <div class="small" style="max-height:180px;overflow-y:auto;">
             {% if not exams.assigned_assignments %}
-              <p class="fst-italic p-1 m-0">No open tasks.</p>
+              <p class="fst-italic text-white-50 p-1 m-0">No assignments posted yet.</p>
             {% endif %}
             {% for item in exams.assigned_assignments %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-warning border-opacity-25 text-white lh-sm">{{ item }}</div>
             {% endfor %}
           </div>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-danger mb-2">⚠️ Deadlines</h6>
-          <div class="small text-white-50">
+          <h6 class="fw-bold text-danger mb-2 d-flex align-items-center gap-1">⚠️ Deadlines
+            {% if exams.deadlines %}<span class="badge bg-danger ms-auto">{{ exams.deadlines|length }}</span>{% endif %}
+          </h6>
+          <div class="small" style="max-height:180px;overflow-y:auto;">
             {% if not exams.deadlines %}
-              <p class="fst-italic p-1 m-0">No immediate targets.</p>
+              <p class="fst-italic text-white-50 p-1 m-0">No deadlines set.</p>
             {% endif %}
             {% for item in exams.deadlines %}
-              <div class="p-2 mb-1 bg-danger bg-opacity-10 rounded border border-danger text-danger fw-bold">{{ item }}</div>
+              <div class="p-2 mb-1 bg-danger bg-opacity-10 rounded border border-danger text-danger fw-bold lh-sm">{{ item }}</div>
             {% endfor %}
           </div>
         </div>
