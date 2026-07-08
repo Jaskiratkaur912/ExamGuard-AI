@@ -71,20 +71,21 @@
     </div>
 
     <h4 class="fw-bold text-white mb-3 fs-5 text-uppercase tracking-wider text-info">📋 Exam & Assignment Management</h4>
-    <div class="row g-3 mb-4">
-      
+
+    {# Live panels — auto-populated from exam papers above; assignments posted below #}
+    <div class="row g-3 mb-3">
+
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-white mb-2 d-flex justify-content-between align-items-center">
-            📅 Upcoming
-            <span class="badge bg-primary text-white style="font-size:10px;">Exam</span>
+          <h6 class="fw-bold text-info mb-2 d-flex justify-content-between align-items-center">
+            📅 Upcoming <span class="badge bg-primary">{{ exams.upcoming|length }}</span>
           </h6>
           <div class="scroll-pane small text-white-50">
             {% if not exams.upcoming %}
-              <p class="fst-italic p-1 m-0">No scheduled exams.</p>
+              <p class="fst-italic p-1 m-0">No scheduled exams — create one above.</p>
             {% endif %}
             {% for item in exams.upcoming %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-info border-opacity-25 text-white lh-sm">{{ item }}</div>
             {% endfor %}
           </div>
         </div>
@@ -92,16 +93,15 @@
 
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-white mb-2 d-flex justify-content-between align-items-center">
-            🚀 Assigned
-            <span class="badge bg-success text-white">Live</span>
+          <h6 class="fw-bold text-success mb-2 d-flex justify-content-between align-items-center">
+            🚀 Live Now <span class="badge bg-success">{{ exams.assigned_exams|length }}</span>
           </h6>
           <div class="scroll-pane small text-white-50">
             {% if not exams.assigned_exams %}
-              <p class="fst-italic p-1 m-0">No active allocations.</p>
+              <p class="fst-italic p-1 m-0">No exams live right now.</p>
             {% endif %}
             {% for item in exams.assigned_exams %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+              <div class="p-2 mb-1 bg-success bg-opacity-10 rounded border border-success border-opacity-25 text-success lh-sm">{{ item }}</div>
             {% endfor %}
           </div>
         </div>
@@ -109,16 +109,22 @@
 
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-white mb-2 d-flex justify-content-between align-items-center">
-            📝 Assignments
-            <span class="badge bg-warning text-dark">Tasks</span>
+          <h6 class="fw-bold text-warning mb-2 d-flex justify-content-between align-items-center">
+            📝 Assignments <span class="badge bg-warning text-dark">{{ exams.assigned_assignments|length }}</span>
           </h6>
           <div class="scroll-pane small text-white-50">
             {% if not exams.assigned_assignments %}
-              <p class="fst-italic p-1 m-0">No open tasks.</p>
+              <p class="fst-italic p-1 m-0">No assignments posted — use the form below.</p>
             {% endif %}
             {% for item in exams.assigned_assignments %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-secondary text-white">{{ item }}</div>
+              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-warning border-opacity-25 text-white lh-sm d-flex justify-content-between align-items-start gap-2">
+                <span>{{ item }}</span>
+                <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" style="flex-shrink:0;">
+                  <input type="hidden" name="kind" value="assignment">
+                  <input type="hidden" name="index" value="{{ loop.index0 }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:10px;" onclick="return confirm('Remove this assignment?')">✕</button>
+                </form>
+              </div>
             {% endfor %}
           </div>
         </div>
@@ -127,20 +133,54 @@
       <div class="col-md-3">
         <div class="card glass-panel p-3 h-100">
           <h6 class="fw-bold text-danger mb-2 d-flex justify-content-between align-items-center">
-            ⚠️ Deadlines
-            <span class="badge bg-danger text-white">Alert</span>
+            ⚠️ Deadlines <span class="badge bg-danger">{{ exams.deadlines|length }}</span>
           </h6>
           <div class="scroll-pane small text-white-50">
             {% if not exams.deadlines %}
-              <p class="fst-italic p-1 m-0">No immediate targets.</p>
+              <p class="fst-italic p-1 m-0">No deadlines set — use the form below.</p>
             {% endif %}
             {% for item in exams.deadlines %}
-              <div class="p-2 mb-1 bg-danger bg-opacity-10 rounded border border-danger text-danger fw-bold">{{ item }}</div>
+              <div class="p-2 mb-1 bg-danger bg-opacity-10 rounded border border-danger text-danger fw-bold lh-sm d-flex justify-content-between align-items-start gap-2">
+                <span>{{ item }}</span>
+                <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" style="flex-shrink:0;">
+                  <input type="hidden" name="kind" value="deadline">
+                  <input type="hidden" name="index" value="{{ loop.index0 }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:10px;" onclick="return confirm('Remove this deadline?')">✕</button>
+                </form>
+              </div>
             {% endfor %}
           </div>
         </div>
       </div>
 
+    </div>
+
+    {# Post a new assignment or deadline — students see this instantly #}
+    <div class="card glass-panel p-4 mb-4" style="border-color: rgba(250,204,21,0.3) !important;">
+      <h6 class="fw-bold text-warning mb-3 fs-6 text-uppercase">📢 Post Assignment or Deadline to Students</h6>
+      <form action="/classroom/{{ classroom.token }}/post-assignment" method="POST">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label text-white-50 small mb-1">Description</label>
+            <input type="text" name="assignment_text" class="form-control bg-dark text-white border-secondary"
+                   placeholder="e.g. Submit Chapter 3 notes" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label text-white-50 small mb-1">Due Date (optional)</label>
+            <input type="datetime-local" name="deadline" class="form-control bg-dark text-white border-secondary">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-white-50 small mb-1">Type</label>
+            <select name="kind" class="form-select bg-dark text-white border-secondary">
+              <option value="assignment">Assignment</option>
+              <option value="deadline">Deadline Alert</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-warning w-100 fw-bold">Post</button>
+          </div>
+        </div>
+      </form>
     </div>
 
     <div class="row g-4">
