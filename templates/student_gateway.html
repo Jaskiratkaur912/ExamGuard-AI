@@ -1,88 +1,3 @@
-<!-- <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Student Candidate Gateway</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background-color: #0f172a; color: #fff; }
-    .glass-panel {
-      background: linear-gradient(135deg, rgba(15, 32, 67, 0.4), rgba(30, 64, 175, 0.25));
-      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
-    }
-    .class-card {
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .class-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);
-      border-color: rgba(16, 185, 129, 0.5) !important;
-    }
-  </style>
-</head>
-<body>
-  <nav class="navbar glass-panel sticky-top mb-4 px-4">
-    <span class="navbar-brand fw-bold text-success fs-4">🎓 Candidate Interface</span>
-    <a href="/student-login" class="btn btn-outline-danger btn-sm px-3">Exit Workspace</a>
-  </nav>
-
-  <div class="container py-4">
-    
-    <div class="card glass-panel text-white p-4 rounded shadow-sm mb-4">
-      <h2 class="fw-bold text-success mb-1">Welcome, Candidate Profile</h2>
-      <p class="text-white-50 m-0 small">Logged identity node: {{ student_email }}</p>
-    </div>
-
-    {% if request.args.get('error') %}
-    <div class="alert alert-danger bg-danger-subtle text-danger border-danger-subtle small py-2 mb-4" role="alert">
-      ⚠️ {{ request.args.get('error') }}
-    </div>
-    {% endif %}
-
-    <div class="card glass-panel p-4 mb-5 border-success border-opacity-20">
-      <h5 class="fw-bold text-white mb-2 fs-6 text-uppercase tracking-wider">Connect to a New Environment</h5>
-      <p class="text-white-50 small mb-3">Input the secure 6-letter matrix token provided by your core admin instruction manager.</p>
-      
-      <form action="/join-classroom" method="POST" class="row g-3 max-width-md">
-        <input type="hidden" name="student_email" value="{{ student_email }}">
-        <div class="col-sm-8 col-md-4">
-          <input type="text" name="class_code" class="form-control bg-dark text-success border-secondary fw-bold tracking-widest text-uppercase" placeholder="e.g. SEC99X" maxlength="6" required>
-        </div>
-        <div class="col-sm-4">
-          <button type="submit" class="btn btn-success w-100 px-4 fw-bold">Join Classroom</button>
-        </div>
-      </form>
-    </div>
-
-    <h4 class="fw-bold text-white mb-3 fs-5">Your Enrolled Class Ecosystems</h4>
-    <div class="row g-4">
-      {% if not my_classes %}
-      <div class="col-12">
-        <p class="text-white-50 small bg-dark bg-opacity-20 p-4 rounded border border-secondary text-center">No active class nodes found. Input a token sequence above to route connection access links.</p>
-      </div>
-      {% endif %}
-
-      {% for class in my_classes %}
-      <div class="col-md-4">
-        <div class="card glass-panel p-4 h-100 d-flex flex-column justify-content-between class-card" style="cursor: pointer;" onclick="window.location.href='/student/classroom/{{ class.token }}?email={{ student_email }}'">
-          <div>
-            <span class="badge bg-success text-dark mb-2 small fw-bold">{{ class.token }}</span>
-            <h5 class="fw-bold text-white mb-2 text-truncate">{{ class.name }}</h5>
-          </div>
-          <div class="d-flex justify-content-between align-items-center mt-3">
-            <span class="text-white-50 small">Roster Connection: <span class="text-success">Verified</span></span>
-            <span class="text-success small fw-bold">Launch Room &rarr;</span>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
-  </div>
-</body>
-</html> -->
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -109,14 +24,14 @@
 <body>
   <nav class="navbar glass-panel sticky-top mb-4 px-4">
     <span class="navbar-brand fw-bold text-success fs-4">🎓 Candidate Interface</span>
-    <a href="/student-login" class="btn btn-outline-danger btn-sm px-3">Exit Workspace</a>
+    <a href="/logout" class="btn btn-outline-danger btn-sm px-3">Logout</a>
   </nav>
 
   <div class="container py-4">
     
     <div class="card glass-panel text-white p-4 rounded shadow-sm mb-4">
-      <h2 class="fw-bold text-success mb-1">Welcome, Candidate Profile</h2>
-      <p class="text-white-50 m-0 small">Logged identity node: {{ student_email }}</p>
+      <h2 class="fw-bold text-success mb-1">Welcome, {{ student_name }}!</h2>
+      <p class="text-white-50 m-0 small">Logged in as: {{ student_email }}</p>
     </div>
 
     {% if request.args.get('error') %}
@@ -130,7 +45,7 @@
       <p class="text-white-50 small mb-3">Input the secure 6-letter matrix token provided by your core admin instruction manager.</p>
       
       <form action="/join-classroom" method="POST" class="row g-3 max-width-md">
-        <input type="hidden" name="student_email" value="{{ student_email }}">
+        
         <div class="col-sm-8 col-md-4">
           <input type="text" name="class_code" class="form-control bg-dark text-success border-secondary fw-bold tracking-widest text-uppercase" placeholder="e.g. SEC99X" maxlength="6" required>
         </div>
@@ -150,7 +65,7 @@
 
       {% for class in my_classes %}
       <div class="col-md-4">
-        <div class="card glass-panel p-4 h-100 d-flex flex-column justify-content-between class-card" style="cursor: pointer;" onclick="window.location.href='/student/classroom/{{ class.token }}?email={{ student_email }}'">
+        <div class="card glass-panel p-4 h-100 d-flex flex-column justify-content-between class-card" style="cursor: pointer;" onclick="window.location.href='/student/classroom/{{ class.token }}'">
           <div>
             <span class="badge bg-success text-dark mb-2 small fw-bold">{{ class.token }}</span>
             <h5 class="fw-bold text-white mb-2 text-truncate">{{ class.name }}</h5>
@@ -192,5 +107,32 @@
   window.addEventListener('touchstart', resetIdleCountdown);
 })();
 </script>
+
+<!-- Device Warning Modal -->
+{% if device_warning %}
+<div class="modal fade show d-block" id="deviceModal" tabindex="-1" style="background:rgba(0,0,0,.7);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:linear-gradient(135deg,#1e0a0a,#7f1d1d);border:1px solid rgba(239,68,68,.5);">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold text-danger">📱 Mobile Device Detected</h5>
+      </div>
+      <div class="modal-body text-white">
+        <p>This examination platform is <strong>designed for desktop or laptop computers</strong>. Using a mobile or tablet device may affect camera proctoring, fullscreen enforcement, and exam stability.</p>
+        <p class="text-warning small mb-0">⚠️ Please switch to a desktop or laptop for the best and most secure experience before proceeding.</p>
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-danger px-4 fw-bold" onclick="ackDevice()">I Understand — Continue Anyway</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function ackDevice(){
+  fetch('/acknowledge-device-warning',{method:'POST'})
+    .finally(()=>document.getElementById('deviceModal').remove());
+}
+</script>
+{% endif %}
+
 </body>
 </html>
