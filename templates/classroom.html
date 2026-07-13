@@ -194,6 +194,91 @@
     background-color: var(--accent-amber);
     border-radius: 50%;
   }
+
+  /* ── Announcement Bulletin Board ─────────────────────────────────── */
+  #announcement-section {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.06) 0%, rgba(20, 24, 46, 0.45) 55%) !important;
+    position: relative;
+    overflow: hidden;
+  }
+  #announcement-section::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .announce-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .announce-card {
+    background: linear-gradient(160deg, rgba(6, 182, 212, 0.08) 0%, rgba(13, 17, 33, 0.75) 60%);
+    border: 1px solid rgba(6, 182, 212, 0.18);
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 10px;
+    padding: 14px 16px;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .announce-card:hover {
+    transform: translateX(3px);
+    border-color: rgba(6, 182, 212, 0.5);
+    box-shadow: 0 6px 18px rgba(6, 182, 212, 0.08);
+  }
+  .announce-pin {
+    position: absolute;
+    top: -8px;
+    left: 14px;
+    font-size: 0.9rem;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+  }
+  .announce-new-badge {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #0b0d19;
+    font-weight: 800;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    animation: pulseGlow 1.8s ease-in-out infinite;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+    50% { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
+  }
+  .announce-meta {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  /* ── Live Activity Log auto-refresh cue ──────────────────────────── */
+  .log-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: inline-block;
+    animation: livePulse 1.4s ease-in-out infinite;
+    margin-right: 5px;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+    50% { opacity: 0.5; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+  }
+  .log-entry-text.log-entry-new {
+    animation: logHighlight 2s ease;
+  }
+  @keyframes logHighlight {
+    0% { background: rgba(34, 197, 94, 0.18); }
+    100% { background: transparent; }
+  }
 </style>
 {% endblock %}
 
@@ -222,6 +307,7 @@
       <a href="#post-section" class="sidebar-link"><i class="bi bi-megaphone"></i> Post Content</a>
       <a href="#repository-section" class="sidebar-link"><i class="bi bi-folder-fill"></i> Resource Repo</a>
       <a href="#recordings-section" class="sidebar-link"><i class="bi bi-camera-video-fill"></i> Meet Streams</a>
+      <a href="/classroom/{{ classroom.token }}/reports" class="sidebar-link"><i class="bi bi-bar-chart-line-fill"></i> Reports</a>
       
       <div class="border-top border-secondary border-opacity-10 my-3"></div>
       
@@ -355,37 +441,54 @@
 
       <!-- ── Announcement Bulletin Board Section ────────────────────── -->
       <div id="announcement-section" class="card glass-panel p-4 mb-4 border-cyan border-opacity-20">
-        <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase text-gradient-cyan"><i class="bi bi-pin-angle-fill"></i> Public Announcement Board</h5>
-        <p class="text-muted small mb-3 d-block">Broadcasted updates, resource links, and general environment notes visible to all members.</p>
-        
-        <div class="row g-3">
-          {% if not exams.announcements %}
-            <div class="col-12 text-center text-muted py-3 border border-secondary border-opacity-10 rounded bg-dark bg-opacity-10">
-              No classroom announcements shared yet. Use the form below to pin a new broadcast notice.
-            </div>
-          {% endif %}
-          {% for ann in exams.announcements %}
-            <div class="col-md-6">
-              <div class="p-3 bg-dark bg-opacity-40 rounded border border-info border-opacity-15 text-white position-relative h-100 activity-data-row" data-date="{{ ann.deadline if ann is mapping else '' }}">
-                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-                  <span class="badge-custom badge-cyan font-mono small text-uppercase">Broadcast</span>
-                  <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" class="m-0">
-                    <input type="hidden" name="kind" value="announcement">
-                    <input type="hidden" name="index" value="{{ loop.index0 }}">
-                    <button type="submit" class="btn btn-sm text-muted hover-text-danger p-0 border-0 bg-transparent" onclick="return confirm('Remove this announcement permanently?')" style="line-height: 1;">✕</button>
-                  </form>
-                </div>
-                <p class="m-0 small text-white-50" style="word-break: break-word;">
-                  {% if ann is mapping %}{{ ann.text }}{% else %}{{ ann }}{% endif %}
-                </p>
-                {% if ann is mapping and ann.deadline %}
-                  <div class="mt-2 text-muted font-mono" style="font-size: 0.68rem;">
-                    <i class="bi bi-calendar-check"></i> Target: {{ ann.deadline.replace('T', ' ') }}
-                  </div>
-                {% endif %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+          <h5 class="fw-bold text-white mb-0 fs-6 text-uppercase text-gradient-cyan"><i class="bi bi-pin-angle-fill"></i> Public Announcement Board</h5>
+          {% if exams.announcements %}<span class="badge-custom badge-cyan font-mono">{{ exams.announcements|length }} pinned</span>{% endif %}
+        </div>
+        <p class="text-muted small mb-3 d-block">Broadcasts pinned here are the <strong class="text-white">only</strong> thing shown to students on this board — synced live to their classroom view.</p>
+
+        <div class="announce-scroll">
+          <div class="row g-3">
+            {% if not exams.announcements %}
+              <div class="col-12 text-center text-muted py-4 border border-secondary border-opacity-10 rounded bg-dark bg-opacity-10">
+                <i class="bi bi-megaphone fs-3 d-block mb-2 text-cyan opacity-50"></i>
+                No classroom announcements shared yet. Use the "Post Content" panel below to pin a new broadcast notice.
               </div>
-            </div>
-          {% endfor %}
+            {% endif %}
+            {% for ann in exams.announcements %}
+              {% set ann_index = loop.index0 %}
+              <div class="col-md-6">
+                <div class="announce-card h-100">
+                  <span class="announce-pin">📌</span>
+                  <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <span class="badge-custom badge-cyan font-mono small text-uppercase">
+                      <i class="bi bi-broadcast"></i> Broadcast
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="announce-new-badge" data-posted="{{ ann.posted_at if ann is mapping else '' }}" style="display:none;">New</span>
+                      <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" class="m-0">
+                        <input type="hidden" name="kind" value="announcement">
+                        <input type="hidden" name="index" value="{{ ann_index }}">
+                        <button type="submit" class="btn btn-sm text-muted hover-text-danger p-0 border-0 bg-transparent" onclick="return confirm('Remove this announcement permanently?')" style="line-height: 1;">✕</button>
+                      </form>
+                    </div>
+                  </div>
+                  <p class="m-0 text-white" style="word-break: break-word; font-size: 0.9rem;">
+                    {% if ann is mapping %}{{ ann.text }}{% else %}{{ ann }}{% endif %}
+                  </p>
+                  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                    <span class="announce-meta">
+                      <i class="bi bi-person-badge"></i> {{ ann.author if ann is mapping and ann.author else 'Admin' }}
+                      {% if ann is mapping and ann.posted_at %} · {{ ann.posted_at }}{% endif %}
+                    </span>
+                    {% if ann is mapping and ann.deadline %}
+                      <span class="announce-meta text-amber"><i class="bi bi-calendar-check"></i> Target: {{ ann.deadline.replace('T', ' ') }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
 
@@ -528,16 +631,19 @@
           <div class="d-flex flex-column gap-3 sticky-top" style="top: 2rem; z-index: 10;">
             
             <!-- Activity Logs Panel -->
-            <div class="card glass-panel p-4 border-warning border-opacity-10 m-0">
-              <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase"><i class="bi bi-terminal-fill text-warning"></i> Activity Logs</h5>
-              <p class="text-muted small mb-3 d-block">Live instance telemetry log events setup or configuration changes.</p>
-              
-              <div class="p-3 rounded log-pane">
+            <div class="card glass-panel p-4 border-warning border-opacity-10 m-0" data-token="{{ classroom.token }}">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <h5 class="fw-bold text-white mb-0 fs-6 text-uppercase"><i class="bi bi-terminal-fill text-warning"></i> Activity Logs</h5>
+                <span class="small text-success font-mono"><span class="log-live-dot"></span>LIVE</span>
+              </div>
+              <p class="text-muted small mb-3 d-block">Auto-refreshes to record and surface new activity as it happens — every day, all day.</p>
+
+              <div id="activity-log-pane" class="p-3 rounded log-pane">
                 {% if not activities %}
-                  <div class="text-muted small">[SYSTEM TELEMETRY]: Waiting for incoming data streams...</div>
+                  <div class="text-muted small" id="activity-log-empty">[SYSTEM TELEMETRY]: Waiting for incoming data streams...</div>
                 {% endif %}
                 {% for act in activities %}
-                  <div class="mb-2 border-bottom border-secondary border-opacity-10 pb-2 log-entry-text">
+                  <div class="mb-2 border-bottom border-secondary border-opacity-10 pb-2 log-entry-text" data-ts="{{ act.timestamp }}">
                     <span class="text-muted d-block font-mono mb-0.5" style="font-size: 0.68rem; letter-spacing: 0.02em;">
                       <i class="bi bi-clock-history"></i> {{ act.timestamp }}
                     </span>
@@ -750,6 +856,71 @@
     mcqList.appendChild(card);
     questionIndex++;
   }
+
+  // ── Announcement Board: flag posts from the last 24h as "New" ─────
+  document.querySelectorAll('.announce-new-badge').forEach(badge => {
+    const posted = badge.dataset.posted;
+    if (!posted) return;
+    const postedDate = new Date(posted.replace(' ', 'T'));
+    if (isNaN(postedDate)) return;
+    const hoursAgo = (Date.now() - postedDate.getTime()) / 36e5;
+    if (hoursAgo >= 0 && hoursAgo <= 24) badge.style.display = 'inline-block';
+  });
+
+  // ── Activity Logs: live auto-refresh ───────────────────────────────
+  // Polls for anything logged since the last entry the panel has, so the
+  // feed keeps recording and showing new activity continuously — including
+  // across a fresh day with zero manual reloads.
+  (function activityLogAutoRefresh() {
+    const pane  = document.getElementById('activity-log-pane');
+    if (!pane) return;
+    const panel = pane.closest('[data-token]');
+    const token = panel ? panel.dataset.token : null;
+    if (!token) return;
+
+    function latestTimestamp() {
+      const rows = pane.querySelectorAll('.log-entry-text[data-ts]');
+      if (!rows.length) return '';
+      return rows[rows.length - 1].dataset.ts;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function poll() {
+      try {
+        const since = latestTimestamp();
+        const res = await fetch(`/classroom/${token}/activity-logs.json?since=${encodeURIComponent(since)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.success || !data.activities.length) return;
+
+        const emptyMsg = document.getElementById('activity-log-empty');
+        if (emptyMsg) emptyMsg.remove();
+
+        data.activities.forEach(act => {
+          const row = document.createElement('div');
+          row.className = 'mb-2 border-bottom border-secondary border-opacity-10 pb-2 log-entry-text log-entry-new';
+          row.dataset.ts = act.timestamp;
+          row.innerHTML = `
+            <span class="text-muted d-block font-mono mb-0.5" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+              <i class="bi bi-clock-history"></i> ${escapeHtml(act.timestamp)}
+            </span>
+            <span style="color: var(--accent-amber); word-break: break-word;">&rarr; ${escapeHtml(act.log)}</span>`;
+          pane.appendChild(row);
+        });
+        pane.scrollTop = pane.scrollHeight;
+      } catch (err) {
+        // Silent — network hiccups shouldn't spam the console every cycle.
+      }
+    }
+
+    poll();
+    setInterval(poll, 15000); // 15s — keeps today's feed current and picks up day-rollover automatically
+  })();
 
   // Updated Calendar Engine script to pull dates from all forms of activities
   document.addEventListener("DOMContentLoaded", function() {
