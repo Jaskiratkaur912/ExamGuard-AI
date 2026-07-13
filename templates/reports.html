@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamGuard AI - Premium Analytics Dashboard</title>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js Core -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --panel-bg: rgba(17, 24, 39, 0.7);
+            --border-glow: rgba(6, 182, 212, 0.15);
+            --cyan-glow: #06b6d4;
+            --text-main: #f3f4f6;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Premium Glassmorphism Cards */
+        .glass-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 45px 0 rgba(6, 182, 212, 0.1);
+        }
+
+        .text-cyan-gradient {
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Navigation Tabs Control Layout */
+        .nav-tabs-custom {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .nav-tabs-custom .nav-link {
+            color: #9ca3af;
+            border: none;
+            background: transparent;
+            padding: 12px 20px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.2s ease;
+        }
+        .nav-tabs-custom .nav-link.active {
+            color: var(--cyan-glow);
+            background: transparent;
+        }
+        .nav-tabs-custom .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--cyan-glow);
+            box-shadow: 0 0 10px var(--cyan-glow);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 320px;
+            width: 100%;
+        }
+
+        /* Action Buttons */
+        .btn-action-download {
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: #e5e7eb;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            padding: 6px 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-action-download:hover {
+            background: var(--cyan-glow);
+            color: #090d16;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+            border-color: var(--cyan-glow);
+        }
+
+        .table-premium th {
+            background: rgba(15, 23, 42, 0.8) !important;
+            color: var(--cyan-glow) !important;
+            font-size: 0.85rem;
+            text-uppercase: true;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid rgba(6, 182, 212, 0.2);
+        }
+        .table-premium td {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hidden Node Transport Core Layer for Safe Parsing -->
+<div id="report-data-store" 
+     data-submissions='{{ report.submissions | tojson | safe }}'
+     data-logins='{{ report.logins | tojson | safe }}'
+     data-cheating='{{ report.cheating | tojson | safe }}'
+     data-overview='{{ report.overview | tojson | safe }}'
+     style="display: none;">
+</div>
+
+<div class="container py-5">
+    <!-- Top Identity Branding Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-5">
+        <div>
+            <a href="/classroom/{{ token }}" class="btn btn-sm text-muted p-0 mb-2 text-decoration-none">
+                <i class="bi bi-chevron-left me-1"></i> Return to Classroom Management Hub
+            </a>
+            <h1 class="h2 fw-bold text-cyan-gradient mb-1">Administrative Intelligence Reports</h1>
+            <p class="text-muted small m-0">Review real-time class metrics, student access logs, proctoring statuses, and generate secure spreadsheet file exports.</p>
+        </div>
+        
+        <!-- Global Command Core Tools Matrix -->
+        <div class="dropdown">
+            <button class="btn btn-action-download dropdown-toggle py-2 px-3 fw-semibold" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-cloud-arrow-down-fill me-2"></i>Export Whole Dataset
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+                <li><a class="dropdown-item" href="/classroom/{{ token }}/report/export/csv?type=overview"><i class="bi bi-filetype-csv me-2 text-warning"></i>CSV Comprehensive Package</a></li>
+                <li><a class="dropdown-item" href="/classroom/{{ token }}/report/export/xlsx?type=overview"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Excel Workbook Document</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Live Performance Dashboard Component View Matrix -->
+    <div class="glass-card p-4">
+        <!-- Interactive Navigation Hub Elements -->
+        <ul class="nav nav-tabs nav-tabs-custom mb-4" id="reportTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-pane" type="button" role="tab"><i class="bi bi-grid-1x2-fill me-2"></i>Overview Spectrum</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="submissions-tab" data-bs-toggle="tab" data-bs-target="#submissions-pane" type="button" role="tab"><i class="bi bi-patch-check-fill me-2"></i>Task Submissions</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="logins-tab" data-bs-toggle="tab" data-bs-target="#logins-pane" type="button" role="tab"><i class="bi bi-shield-lock-fill me-2"></i>Access Dynamics</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cheating-tab" data-bs-toggle="tab" data-bs-target="#cheating-pane" type="button" role="tab"><i class="bi bi-exclamation-triangle-fill me-2"></i>Proctoring Anomalies</button>
+            </li>
+        </ul>
+
+        <!-- Content Core Windows Panels -->
+        <div class="tab-content" id="reportTabsContent">
+            
+            <!-- 1. Overview Matrix Pane -->
+            <div class="tab-pane fade show active" id="overview-pane" role="tabpanel">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <div class="chart-wrapper">
+                            <canvas id="overviewChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <h4 class="fw-bold mb-3 text-white">Classroom Footprint Summary</h4>
+                        <p class="text-muted small">This radar chart visualizes structural data components spanning student counts, assignment profiles, and proctoring log sizes. Use this breakdown to measure standard user system workloads.</p>
+                        <hr class="border-secondary my-3">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="/classroom/{{ token }}/report/export/csv?type=overview" class="btn btn-action-download"><i class="bi bi-file-earmark-arrow-down me-1"></i>Download CSV</a>
+                            <a href="/classroom/{{ token }}/report/export/xlsx?type=overview" class="btn btn-action-download"><i class="bi bi-file-earmark-excel me-1"></i>Download Excel</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Submissions Breakdown Pane -->
+            <div class="tab-pane fade" id="submissions-pane" role="tabpanel">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-6">
+                        <div class="chart-wrapper">
+                            <canvas id="submissionsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <h4 class="fw-bold mb-3 text-white">Evaluation Backlogs & Submissions Timeline</h4>
+                        <p class="text-muted small">Monitor tracking statistics on student responses. Identifies metrics comparing on-time items vs late entries or pending assignments requiring immediate attention.</p>
+                        <hr class="border-secondary my-3">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="/classroom/{{ token }}/report/export/csv?type=submissions" class="btn btn-action-download"><i class="bi bi-file-earmark-arrow-down me-1"></i>Download CSV</a>
+                            <a href="/classroom/{{ token }}/report/export/xlsx?type=submissions" class="btn btn-action-download"><i class="bi bi-file-earmark-excel me-1"></i>Download Excel</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Authentication Logins Pane -->
+            <div class="tab-pane fade" id="logins-pane" role="tabpanel">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <div class="chart-wrapper">
+                            <canvas id="loginsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <h4 class="fw-bold mb-3 text-white">Access Frequency Windows</h4>
+                        <p class="text-muted small">Tracks student system entry loops over historical operational bounds. Useful for spotting drop-offs in engagement or sudden shifts in platform usage behavior.</p>
+                        <hr class="border-secondary my-3">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="/classroom/{{ token }}/report/export/csv?type=logins" class="btn btn-action-download"><i class="bi bi-file-earmark-arrow-down me-1"></i>Download CSV</a>
+                            <a href="/classroom/{{ token }}/report/export/xlsx?type=logins" class="btn btn-action-download"><i class="bi bi-file-earmark-excel me-1"></i>Download Excel</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Proctoring Security Flags Pane -->
+            <div class="tab-pane fade" id="cheating-pane" role="tabpanel">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <div class="chart-wrapper">
+                            <canvas id="cheatingChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <h4 class="fw-bold mb-3 text-white text-danger"><i class="bi bi-shield-alert me-2"></i>Security Flags & Integrity Analysis</h4>
+                        <p class="text-muted small">Real-time count of system security flags. Aggregates data on layout shifts, unauthorized application switching, and copy-paste attempts during test workflows.</p>
+                        <hr class="border-secondary my-3">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="/classroom/{{ token }}/report/export/csv?type=cheating" class="btn btn-action-download"><i class="bi bi-file-earmark-arrow-down me-1"></i>Download CSV</a>
+                            <a href="/classroom/{{ token }}/report/export/xlsx?type=cheating" class="btn btn-action-download"><i class="bi bi-file-earmark-excel me-1"></i>Download Excel</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Student Risk Defaulters Management Data Grid Section -->
+    <div class="glass-card p-4 mt-5">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
+            <div>
+                <h3 class="h5 fw-bold text-white m-0">Student Integrity Risk Matrix Profile</h3>
+                <p class="text-muted small m-0">Lists students flagged with suspicious access logs or high infraction rates.</p>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-action-download dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Export Profile Grid
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="/classroom/{{ token }}/report/export/csv?type=defaulters">Export as CSV</a></li>
+                    <li><a class="dropdown-item" href="/classroom/{{ token }}/report/export/xlsx?type=defaulters">Export as Excel</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-premium vertical-align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Student Account (Email)</th>
+                        <th class="text-center">Total Flag Events</th>
+                        <th class="text-center">Window Shifts</th>
+                        <th class="text-center">Calculated Risk Index</th>
+                        <th>Status Assessment Verdict</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if not report.defaulters %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">No security default anomalies detected for this evaluation tracking set.</td>
+                    </tr>
+                    {% endif %}
+                    {% for row in report.defaulters %}
+                    <tr>
+                        <td class="fw-semibold text-info">{{ row.student }}</td>
+                        <td class="text-center text-danger fw-bold">{{ row.flags }}</td>
+                        <td class="text-center text-warning">{{ row.switches }}</td>
+                        <td class="text-center">
+                            {% if row.score >= 70 %}
+                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50 px-3 py-1.5">Critical Risk ({{ row.score }}%)</span>
+                            {% elif row.score >= 35 %}
+                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-3 py-1.5">Medium Warning ({{ row.score }}%)</span>
+                            {% else %}
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-3 py-1.5">Clear Status ({{ row.score }}%)</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="text-muted small">{{ row.verdict }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // DOM Dataset Transport Extraction
+    const storeNode = document.getElementById('report-data-store');
+    if(!storeNode) return;
+
+    const submissions = JSON.parse(storeNode.dataset.submissions || '{}');
+    const logins = JSON.parse(storeNode.dataset.logins || '{}');
+    const cheating = JSON.parse(storeNode.dataset.cheating || '{}');
+    const overview = JSON.parse(storeNode.dataset.overview || '{}');
+
+    // Chart Options Default Styling Override Configurations
+    const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: '#9ca3af', font: { family: 'Inter' } } }
+        }
+    };
+
+    // 1. Overview Radar Layout Chart Configuration
+    const viewCtx = document.getElementById('overviewChart').getContext('2d');
+    new Chart(viewCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Students Enrolled', 'Exams Tracked', 'Assignments Due', 'System Logs Profile', 'Announcements'],
+            datasets: [{
+                label: 'System Counts Metrics Spectrum',
+                data: [
+                    overview.students || 0,
+                    overview.exams || 0,
+                    overview.assignments || 0,
+                    overview.logs || 0,
+                    overview.announcements || 0
+                ],
+                backgroundColor: 'rgba(6, 182, 212, 0.2)',
+                borderColor: '#06b6d4',
+                pointBackgroundColor: '#06b6d4',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            scales: {
+                r: {
+                    angleLines: { color: 'rgba(255, 255, 255, 0.08)' },
+                    grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                    pointLabels: { color: '#9ca3af', font: { size: 11 } },
+                    ticks: { display: false }
+                }
+            }
+        }
+    });
+
+    // 2. Submissions Status Pie/Donut Chart Configuration
+    const subCtx = document.getElementById('submissionsChart').getContext('2d');
+    new Chart(subCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Submitted Timely', 'Late Turn-ins', 'Pending Pipeline/Backlog'],
+            datasets: [{
+                data: [submissions.submitted || 0, submissions.late || 0, submissions.pending || 0],
+                backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                borderWidth: 0
+            }]
+        },
+        options: chartDefaults
+    });
+
+    // 3. User Login Access Profile Bar Chart Configuration
+    const logCtx = document.getElementById('loginsChart').getContext('2d');
+    new Chart(logCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Past 24 Hours', '7-Day Window Range', '30-Day Cycle Active'],
+            datasets: [{
+                label: 'Session Validations Activity Log',
+                data: [logins.today || 0, logins.week || 0, logins.month || 0],
+                backgroundColor: ['#3b82f6', '#06b6d4', '#6366f1']
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            scales: {
+                x: { ticks: { color: '#9ca3af' }, grid: { display: false } },
+                y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+
+    // 4. Security Proctoring Violations Horizonal Chart Configuration
+    const cheatCtx = document.getElementById('cheatingChart').getContext('2d');
+    new Chart(cheatCtx, {
+        type: 'bar',
+        indexAxis: 'y',
+        data: {
+            labels: ['Window Tab Exits', 'Copy-Paste Flags', 'Fullscreen Escapes', 'Second Monitor Linkups'],
+            datasets: [{
+                data: [cheating.switches || 0, cheating.copypaste || 0, cheating.fullscreen || 0, cheating.devices || 0],
+                backgroundColor: ['#ef4444', '#f43f5e', '#ec4899', '#8b5cf6']
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#9ca3af' }, grid: { display: false } }
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>
