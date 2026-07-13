@@ -36,12 +36,14 @@ def create_app(config_name=None):
     from app.routes.question_routes import question_bp
     from app.routes.admin_routes import admin_bp
     from app.routes.proctoring_routes import proctoring_bp
+    from app.routes.ml_routes import ml_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(exam_bp, url_prefix="/api/exams")
     app.register_blueprint(question_bp, url_prefix="/api/questions")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(proctoring_bp, url_prefix="/api/proctoring")
+    app.register_blueprint(ml_bp, url_prefix="/api/ml")
 
     from app.utils.error_handlers import register_error_handlers
     register_error_handlers(app)

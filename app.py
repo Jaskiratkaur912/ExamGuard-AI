@@ -1051,5 +1051,357 @@ def _on_disconnect():
     if info:
         emit('user-left', {"id": request.sid}, room=info['room'], include_self=False)
 
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ML INTEGRATION — Cheating Detection & Analysis Dashboard
+# ═════════════════════════════════════════════════════════════════════════════
+
+try:
+    from cheating_score import compute_cheating_score
+    from exam_intelligence import QuestionBankRandomizer
+    ML_ENABLED = True
+except ImportError:
+    print("[WARN] ML models (cheating_score.py, exam_intelligence.py) not found")
+    ML_ENABLED = False
+
+# ─────────────────────────────────────────────
+# ML CONVERSION HELPERS
+# ─────────────────────────────────────────────
+
+def browser_events_to_violation_log(student_email: str, exam_id: str = "") -> list:
+    """Convert browser events to violation log format for ML cheating score model."""
+    events = BROWSER_EVENTS.get(student_email, [])
+    
+    violation_log = []
+    
+    # Map browser event types to cheating score model reason strings
+    event_type_mapping = {
+        "tab_switch":                "Student switched tabs or minimized the window",
+        "fullscreen_exit":           "Student exited fullscreen mode",
+        "window_blur":               "Browser window lost focus",
+        "multiple_faces":            "Multiple faces detected in camera frame",
+        "face_missing":              "No face detected in camera frame",
+        "head_turn_left":            "Significant head turn away from screen detected",
+        "head_turn_right":           "Significant head turn away from screen detected",
+        "looking_down":              "Significant head turn away from screen detected",
+        "face_mismatch":             "Face mismatch detected",
+        "paste_attempt":             "Paste attempt detected",
+        "copy_attempt":              "Copy attempt detected",
+        "cut_attempt":               "Cut attempt detected",
+        "right_click":               "Right-click attempt detected",
+        "dev_tools":                 "Developer tools opened",
+    }
+    
+    for event in events:
+        event_type = event.get("type", "")
+        if exam_id and event.get("exam_id") != exam_id:
+            continue
+        
+        reason = event_type_mapping.get(event_type, event_type)
+        
+        violation_log.append({
+            "reason": reason,
+            "time": event.get("timestamp", ""),
+            "details": {"event_type": event_type, "detail": event.get("detail", "")}
+        })
+    
+    return violation_log
+
+
+def calculate_ml_cheating_analysis(student_email: str, exam_id: str = "", exam_duration: int = 60, score_percent: float = None) -> dict:
+    """Run ML cheating score model on student data."""
+    if not ML_ENABLED:
+        return None
+    
+    violation_log = browser_events_to_violation_log(student_email, exam_id)
+    
+    try:
+        result = compute_cheating_score(
+            violation_log=violation_log,
+            exam_duration_minutes=exam_duration,
+            exam_score_pct=score_percent
+        )
+        return result
+    except Exception as e:
+        print(f"[ERROR] ML analysis failed: {e}")
+        return None
+
+
+# ─────────────────────────────────────────────
+# ML DASHBOARD ROUTES
+# ─────────────────────────────────────────────
+
+@app.route('/ml-dashboard')
+@require_role('admin')
+def ml_dashboard():
+    """ML Analysis Dashboard — For teachers/admins."""
+    admin_email = session.get('user_email', '')
+    classrooms = [c for c in CLASSROOM_DATABASE if c.get('owner_email') == admin_email]
+    
+    return render_template('ml_dashboard_main.html', classrooms=classrooms, ml_enabled=ML_ENABLED)
+
+
+@app.route('/ml-dashboard/exam/<exam_id>')
+@require_role('admin')
+def ml_exam_analysis(exam_id):
+    """Detailed ML analysis for all students in an exam."""
+    admin_email = session.get('user_email', '')
+    
+    # Find exam details
+    exam = None
+    classroom_token = None
+    for token, data in EXAM_DATABASE.items():
+        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+            if paper.get('id') == exam_id:
+                exam = paper
+                classroom_token = token
+                break
+    
+    if not exam:
+        return "Exam not found", 404
+    
+    # Verify admin owns classroom
+    classroom = owned_classroom(classroom_token, admin_email)
+    if not classroom:
+        return "Access denied", 403
+    
+    # Get all students enrolled in classroom
+    exam_duration = exam.get('duration_minutes', 60)
+    students_in_class = [
+        email for email, classes in STUDENT_ENROLLMENTS.items()
+        if classroom_token.upper() in classes
+    ]
+    
+    analyses = []
+    for student_email in students_in_class:
+        student_name = USER_DATABASE.get(student_email, {}).get('full_name', student_email)
+        
+        # Get student's exam submission
+        submission = EXAM_SUBMISSIONS_DB.get(student_email, {}).get(exam_id, {})
+        
+        # Run ML analysis
+        score_pct = None
+        if submission.get('marks_obtained') and submission.get('total_marks'):
+            score_pct = (submission['marks_obtained'] / submission['total_marks']) * 100
+        
+        analysis = calculate_ml_cheating_analysis(
+            student_email=student_email,
+            exam_id=exam_id,
+            exam_duration=exam_duration,
+            score_percent=score_pct
+        )
+        
+        if analysis:
+            analyses.append({
+                "student_name": student_name,
+                "student_email": student_email,
+                "cheating_score": analysis.get("cheating_score", 0),
+                "risk_level": analysis.get("risk_level", "unknown"),
+                "breakdown": analysis.get("breakdown", {}),
+                "flags": analysis.get("flags", []),
+                "exam_score": f"{submission.get('marks_obtained', 0)}/{submission.get('total_marks', 0)}",
+                "submission_status": submission.get("status", "not_submitted"),
+            })
+    
+    return render_template('ml_exam_analysis.html', exam=exam, analyses=analyses, classroom=classroom)
+
+
+@app.route('/ml-dashboard/student/<student_email>/<exam_id>')
+@require_role('admin')
+def ml_student_detailed(student_email, exam_id):
+    """Detailed ML analysis for a single student's exam."""
+    admin_email = session.get('user_email', '')
+    
+    # Find exam and classroom
+    classroom_token = None
+    exam = None
+    for token, data in EXAM_DATABASE.items():
+        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+            if paper.get('id') == exam_id:
+                exam = paper
+                classroom_token = token
+                break
+    
+    if not exam or not classroom_token:
+        return "Exam not found", 404
+    
+    # Verify access
+    classroom = owned_classroom(classroom_token, admin_email)
+    if not classroom:
+        return "Access denied", 403
+    
+    student_name = USER_DATABASE.get(student_email, {}).get('full_name', student_email)
+    submission = EXAM_SUBMISSIONS_DB.get(student_email, {}).get(exam_id, {})
+    
+    # Get ML analysis
+    exam_duration = exam.get('duration_minutes', 60)
+    score_pct = None
+    if submission.get('marks_obtained') and submission.get('total_marks'):
+        score_pct = (submission['marks_obtained'] / submission['total_marks']) * 100
+    
+    analysis = calculate_ml_cheating_analysis(
+        student_email=student_email,
+        exam_id=exam_id,
+        exam_duration=exam_duration,
+        score_percent=score_pct
+    )
+    
+    # Get browser events
+    browser_events = BROWSER_EVENTS.get(student_email, [])
+    exam_events = [e for e in browser_events if e.get('exam_id') == exam_id or not exam_id]
+    
+    return render_template('ml_student_detail.html', 
+                         student_name=student_name,
+                         student_email=student_email,
+                         exam=exam,
+                         analysis=analysis,
+                         browser_events=exam_events,
+                         submission=submission)
+
+
+# ─────────────────────────────────────────────
+# ML API ENDPOINTS (JSON)
+# ─────────────────────────────────────────────
+
+@app.route('/api/ml/cheating-analysis/<student_email>/<exam_id>')
+@require_role('admin')
+def api_cheating_analysis(student_email, exam_id):
+    """Get ML cheating analysis for a student's exam."""
+    admin_email = session.get('user_email', '')
+    
+    # Find exam
+    classroom_token = None
+    exam = None
+    for token, data in EXAM_DATABASE.items():
+        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+            if paper.get('id') == exam_id:
+                exam = paper
+                classroom_token = token
+                break
+    
+    if not exam or not classroom_token:
+        return jsonify({"error": "Exam not found"}), 404
+    
+    # Verify access
+    if not owned_classroom(classroom_token, admin_email):
+        return jsonify({"error": "Access denied"}), 403
+    
+    exam_duration = exam.get('duration_minutes', 60)
+    submission = EXAM_SUBMISSIONS_DB.get(student_email, {}).get(exam_id, {})
+    
+    score_pct = None
+    if submission.get('marks_obtained') and submission.get('total_marks'):
+        score_pct = (submission['marks_obtained'] / submission['total_marks']) * 100
+    
+    analysis = calculate_ml_cheating_analysis(
+        student_email=student_email,
+        exam_id=exam_id,
+        exam_duration=exam_duration,
+        score_percent=score_pct
+    )
+    
+    if not analysis:
+        return jsonify({"error": "Analysis failed"}), 500
+    
+    return jsonify(analysis), 200
+
+
+@app.route('/api/ml/exam-statistics/<exam_id>')
+@require_role('admin')
+def api_exam_statistics(exam_id):
+    """Get ML statistics for all students in an exam."""
+    admin_email = session.get('user_email', '')
+    
+    # Find exam
+    classroom_token = None
+    exam = None
+    for token, data in EXAM_DATABASE.items():
+        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+            if paper.get('id') == exam_id:
+                exam = paper
+                classroom_token = token
+                break
+    
+    if not exam or not classroom_token:
+        return jsonify({"error": "Exam not found"}), 404
+    
+    if not owned_classroom(classroom_token, admin_email):
+        return jsonify({"error": "Access denied"}), 403
+    
+    exam_duration = exam.get('duration_minutes', 60)
+    students = [e for e, c in STUDENT_ENROLLMENTS.items() if classroom_token.upper() in c]
+    
+    analyses = []
+    high_risk_count = 0
+    total_score = 0
+    
+    for student_email in students:
+        submission = EXAM_SUBMISSIONS_DB.get(student_email, {}).get(exam_id, {})
+        score_pct = None
+        if submission.get('marks_obtained') and submission.get('total_marks'):
+            score_pct = (submission['marks_obtained'] / submission['total_marks']) * 100
+        
+        analysis = calculate_ml_cheating_analysis(
+            student_email=student_email,
+            exam_id=exam_id,
+            exam_duration=exam_duration,
+            score_percent=score_pct
+        )
+        
+        if analysis:
+            cheating_score = analysis.get("cheating_score", 0)
+            total_score += cheating_score
+            if analysis.get("risk_level") in ["high", "critical"]:
+                high_risk_count += 1
+            
+            analyses.append({
+                "student_email": student_email,
+                "student_name": USER_DATABASE.get(student_email, {}).get('full_name', student_email),
+                "cheating_score": cheating_score,
+                "risk_level": analysis.get("risk_level", "unknown")
+            })
+    
+    avg_score = total_score / len(analyses) if analyses else 0
+    
+    return jsonify({
+        "exam_id": exam_id,
+        "total_students": len(analyses),
+        "high_risk_count": high_risk_count,
+        "average_cheating_score": round(avg_score, 2),
+        "analyses": analyses
+    }), 200
+
+
+@app.route('/api/ml/browser-events/<student_email>/<exam_id>')
+@require_role('admin')
+def api_browser_events(student_email, exam_id):
+    """Get raw browser events for a student during an exam."""
+    admin_email = session.get('user_email', '')
+    
+    # Find exam
+    classroom_token = None
+    for token, data in EXAM_DATABASE.items():
+        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+            if paper.get('id') == exam_id:
+                classroom_token = token
+                break
+    
+    if not classroom_token:
+        return jsonify({"error": "Exam not found"}), 404
+    
+    if not owned_classroom(classroom_token, admin_email):
+        return jsonify({"error": "Access denied"}), 403
+    
+    events = BROWSER_EVENTS.get(student_email, [])
+    exam_events = [e for e in events if e.get('exam_id') == exam_id]
+    
+    return jsonify({
+        "student_email": student_email,
+        "exam_id": exam_id,
+        "event_count": len(exam_events),
+        "events": exam_events
+    }), 200
+
+
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=5000)
