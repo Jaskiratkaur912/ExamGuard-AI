@@ -1,129 +1,200 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Forensic Audit Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body{background:#0f172a;color:#fff;}
-    .glass-panel{background:linear-gradient(135deg,rgba(15,32,67,.6),rgba(30,64,175,.35));backdrop-filter:blur(12px);border:1px solid rgba(96,165,250,.2);}
-    .log-row{border-left:3px solid rgba(96,165,250,.4);padding:6px 10px;margin-bottom:4px;font-size:.8rem;background:rgba(0,0,0,.25);border-radius:4px;}
-    .badge-flag{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:#f87171;padding:2px 8px;border-radius:20px;font-size:.7rem;}
-    .tab-content{max-height:420px;overflow-y:auto;}
-  </style>
-</head>
-<body>
-<nav class="navbar glass-panel sticky-top mb-4 px-4">
-  <span class="navbar-brand fw-bold text-warning fs-5">🔍 Forensic Audit Dashboard</span>
-  <a href="/admin-dashboard" class="btn btn-outline-light btn-sm">← Dashboard</a>
+{% extends "base.html" %}
+
+{% block title %}Forensic Audit Center | ExamGuard-AI{% endblock %}
+
+{% block head %}
+<style>
+  .log-row {
+    border-left: 3px solid var(--accent-blue);
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    font-size: .85rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+  }
+  .log-row-flag {
+    border-left-color: var(--accent-red);
+  }
+  .badge-flag {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .tab-pane-container {
+    max-height: 520px;
+    overflow-y: auto;
+  }
+  .nav-tabs-custom {
+    border-bottom: 1px solid var(--border-primary);
+  }
+  .nav-tabs-custom .nav-link {
+    color: var(--text-muted);
+    border: none;
+    background: transparent;
+    padding: 12px 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+  }
+  .nav-tabs-custom .nav-link:hover {
+    color: var(--text-main);
+  }
+  .nav-tabs-custom .nav-link.active {
+    color: var(--accent-cyan);
+    border-bottom: 2px solid var(--accent-cyan);
+    background: transparent;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-custom sticky-top mb-4">
+  <div class="container-fluid d-flex align-items-center justify-content-between">
+    <span class="navbar-brand text-gradient-cyan">
+      <i class="bi bi-search"></i> Forensic Audit Dashboard
+    </span>
+    <a href="/admin-dashboard" class="btn btn-secondary-custom py-2 px-3">
+      <i class="bi bi-chevron-left"></i> Return to Dashboard
+    </a>
+  </div>
 </nav>
-<div class="container py-2">
+
+<div class="container py-2 animate-fade-in">
 
   <!-- Tab navigation -->
-  <ul class="nav nav-tabs mb-4" id="forensicTabs">
-    <li class="nav-item"><button class="nav-link active text-info" data-bs-toggle="tab" data-bs-target="#tab-login">🔐 Login History</button></li>
-    <li class="nav-item"><button class="nav-link text-info" data-bs-toggle="tab" data-bs-target="#tab-browser">🖥️ Browser Monitoring</button></li>
-    <li class="nav-item"><button class="nav-link text-info" data-bs-toggle="tab" data-bs-target="#tab-activity">📋 Exam Activity</button></li>
+  <ul class="nav nav-tabs nav-tabs-custom mb-4" id="forensicTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-login" type="button">
+        <i class="bi bi-shield-lock"></i> Session Entry Logs
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-browser" type="button">
+        <i class="bi bi-laptop"></i> Browser Telemetry
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-activity" type="button">
+        <i class="bi bi-journal-text"></i> Exam Activity Records
+      </button>
+    </li>
   </ul>
 
   <div class="tab-content" id="forensicTabContent">
 
     <!-- LOGIN HISTORY -->
-    <div class="tab-pane fade show active" id="tab-login">
-      <div class="card glass-panel p-4 mb-3">
-        <h5 class="fw-bold text-warning mb-3">Your Admin Login History</h5>
-        <div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-login" role="tabpanel">
+      <!-- Admin Login Log -->
+      <div class="card glass-panel p-4 mb-4 border-info border-opacity-10">
+        <h5 class="fw-bold text-cyan mb-3 font-mono">Your Admin Login History</h5>
+        <div class="tab-pane-container custom-scroll">
           {% if not admin_logins %}
-            <p class="text-white-50 small fst-italic">No login events recorded yet.</p>
+            <p class="text-muted small fst-italic py-2 font-mono">No entry logs registered yet.</p>
           {% endif %}
           {% for entry in admin_logins|reverse %}
           <div class="log-row">
-            <span class="badge bg-info text-dark me-2">{{ entry.event }}</span>
+            <span class="badge-custom badge-blue me-2">{{ entry.event|upper }}</span>
             <span class="text-white">{{ entry.timestamp }}</span>
-            <span class="text-white-50 ms-3 small">IP: {{ entry.ip }}</span>
-            <div class="text-white-50 small mt-1" style="word-break:break-all;">UA: {{ entry.ua }}</div>
+            <span class="text-muted ms-3 small">IP: {{ entry.ip }}</span>
+            <div class="text-muted small mt-1.5" style="word-break:break-all; font-size: 0.8rem;">User Agent: {{ entry.ua }}</div>
           </div>
           {% endfor %}
         </div>
       </div>
 
-      <div class="card glass-panel p-4">
-        <h5 class="fw-bold text-info mb-3">Student Login History</h5>
-        {% if not student_logins %}
-          <p class="text-white-50 small fst-italic">No students enrolled in your classrooms yet.</p>
-        {% endif %}
-        {% for student, events in student_logins.items() %}
-        <div class="mb-3">
-          <h6 class="text-success fw-bold mb-2">{{ student }}</h6>
-          {% if not events %}
-            <p class="text-white-50 small fst-italic ms-2">No events.</p>
+      <!-- Student Login Log -->
+      <div class="card glass-panel p-4 border-info border-opacity-10">
+        <h5 class="fw-bold text-cyan mb-3 font-mono">Candidate Entry Telemetry</h5>
+        <div class="tab-pane-container custom-scroll">
+          {% if not student_logins %}
+            <p class="text-muted small fst-italic py-2 font-mono">No students enrolled in your classroom environments yet.</p>
           {% endif %}
-          {% for entry in events|reverse %}
-          <div class="log-row ms-2">
-            <span class="badge bg-secondary me-2">{{ entry.event }}</span>
-            <span class="text-white">{{ entry.timestamp }}</span>
-            <span class="text-white-50 ms-3 small">IP: {{ entry.ip }}</span>
+          {% for student, events in student_logins.items() %}
+          <div class="mb-4">
+            <h6 class="text-success fw-bold mb-2 font-mono"><i class="bi bi-person-fill"></i> {{ student }}</h6>
+            {% if not events %}
+              <p class="text-muted small fst-italic ms-3 font-mono">No telemetry events logged.</p>
+            {% endif %}
+            {% for entry in events|reverse %}
+            <div class="log-row ms-3">
+              <span class="badge-custom badge-cyan me-2">{{ entry.event|upper }}</span>
+              <span class="text-white">{{ entry.timestamp }}</span>
+              <span class="text-muted ms-3 small">IP: {{ entry.ip }}</span>
+            </div>
+            {% endfor %}
           </div>
           {% endfor %}
         </div>
-        {% endfor %}
       </div>
     </div>
 
     <!-- BROWSER MONITORING -->
-    <div class="tab-pane fade" id="tab-browser">
-      <div class="card glass-panel p-4">
-        <h5 class="fw-bold text-danger mb-3">🖥️ Browser Monitoring Records</h5>
-        <p class="text-white-50 small mb-3">Tab switches, fullscreen exits, face detection flags, and other integrity events captured during exams.</p>
-        {% if not student_events %}
-          <p class="text-white-50 small fst-italic">No browser events recorded yet.</p>
-        {% endif %}
-        {% for student, events in student_events.items() %}
-        <div class="mb-4">
-          <h6 class="text-success fw-bold mb-2">{{ student }}
-            {% if events %}<span class="badge bg-danger ms-2">{{ events|length }} events</span>{% endif %}
-          </h6>
-          {% if not events %}
-            <p class="text-white-50 small fst-italic ms-2">No events recorded.</p>
+    <div class="tab-pane fade" id="tab-browser" role="tabpanel">
+      <div class="card glass-panel p-4 border-danger border-opacity-10">
+        <h5 class="fw-bold text-danger mb-3 font-mono">🖥️ Viewport Isolation Infractions</h5>
+        <p class="text-muted small mb-4">Capturing page focus updates, visibility shifts, multi-face events, and anomalies.</p>
+        
+        <div class="tab-pane-container custom-scroll">
+          {% if not student_events %}
+            <p class="text-muted small fst-italic py-2 font-mono">No viewport telemetry registered.</p>
           {% endif %}
-          {% for ev in events|reverse %}
-          <div class="log-row ms-2">
-            <span class="badge-flag me-2">{{ ev.type }}</span>
-            <span class="text-white">{{ ev.timestamp }}</span>
-            {% if ev.exam_id %}<span class="text-white-50 ms-2 small">Exam: {{ ev.exam_id }}</span>{% endif %}
-            <div class="text-warning small mt-1">{{ ev.detail }}</div>
+          {% for student, events in student_events.items() %}
+          <div class="mb-4">
+            <h6 class="text-success fw-bold mb-2 font-mono">
+              <i class="bi bi-person-exclamation"></i> {{ student }}
+              {% if events %}<span class="badge-custom badge-red ms-2 py-0.5 px-2" style="font-size: 0.7rem;">{{ events|length }} incident(s)</span>{% endif %}
+            </h6>
+            {% if not events %}
+              <p class="text-muted small fst-italic ms-3 font-mono">No anomalies detected.</p>
+            {% endif %}
+            {% for ev in events|reverse %}
+            <div class="log-row log-row-flag ms-3">
+              <span class="badge-flag me-2">{{ ev.type|upper }}</span>
+              <span class="text-white">{{ ev.timestamp }}</span>
+              {% if ev.exam_id %}<span class="text-muted ms-2 small">Exam ID: {{ ev.exam_id }}</span>{% endif %}
+              <div class="text-warning small mt-1.5"><i class="bi bi-exclamation-triangle"></i> {{ ev.detail }}</div>
+            </div>
+            {% endfor %}
           </div>
           {% endfor %}
         </div>
-        {% endfor %}
       </div>
     </div>
 
     <!-- EXAM ACTIVITY LOGS -->
-    <div class="tab-pane fade" id="tab-activity">
-      <div class="card glass-panel p-4">
-        <h5 class="fw-bold text-info mb-3">📋 Exam Activity Logs</h5>
-        {% for token, logs in activity_logs.items() %}
-        <div class="mb-4">
-          <h6 class="text-info fw-bold mb-2">Classroom <span class="badge bg-info text-dark">{{ token }}</span></h6>
-          {% if not logs %}
-            <p class="text-white-50 small fst-italic ms-2">No activity recorded.</p>
+    <div class="tab-pane fade" id="tab-activity" role="tabpanel">
+      <div class="card glass-panel p-4 border-info border-opacity-10">
+        <h5 class="fw-bold text-cyan mb-3 font-mono">📋 Deployed Activity Datastreams</h5>
+        
+        <div class="tab-pane-container custom-scroll">
+          {% if not activity_logs %}
+            <p class="text-muted small fst-italic py-2 font-mono">No operational logs recorded.</p>
           {% endif %}
-          {% for log in logs|reverse %}
-          <div class="log-row ms-2">
-            <span class="text-white-50 me-2">{{ log.timestamp }}</span>
-            <span class="text-white">{{ log.log }}</span>
+          {% for token, logs in activity_logs.items() %}
+          <div class="mb-4">
+            <h6 class="text-info fw-bold mb-2 font-mono"><i class="bi bi-terminal"></i> Classroom Environment [{{ token }}]</h6>
+            {% if not logs %}
+              <p class="text-muted small fst-italic ms-3 font-mono">Telemetry channel silent.</p>
+            {% endif %}
+            {% for log in logs|reverse %}
+            <div class="log-row ms-3">
+              <span class="text-muted me-3">[{{ log.timestamp }}]</span>
+              <span class="text-white">{{ log.log }}</span>
+            </div>
+            {% endfor %}
           </div>
           {% endfor %}
         </div>
-        {% endfor %}
-        {% if not activity_logs %}
-          <p class="text-white-50 small fst-italic">No activity yet.</p>
-        {% endif %}
       </div>
     </div>
 
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-</body></html>
+{% endblock %}

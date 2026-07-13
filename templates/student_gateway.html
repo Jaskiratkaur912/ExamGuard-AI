@@ -1,127 +1,134 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Student Candidate Gateway</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background-color: #0f172a; color: #fff; }
-    .glass-panel {
-      background: linear-gradient(135deg, rgba(15, 32, 67, 0.4), rgba(30, 64, 175, 0.25));
-      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
-    }
-    .class-card {
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .class-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);
-      border-color: rgba(16, 185, 129, 0.5) !important;
-    }
-  </style>
-</head>
-<body>
-  <nav class="navbar glass-panel sticky-top mb-4 px-4">
-    <span class="navbar-brand fw-bold text-success fs-4">🎓 Candidate Interface</span>
-    <a href="/logout" class="btn btn-outline-danger btn-sm px-3">Logout</a>
-  </nav>
+{% extends "base.html" %}
 
-  <div class="container py-4">
-    
-    <div class="card glass-panel text-white p-4 rounded shadow-sm mb-4">
-      <h2 class="fw-bold text-success mb-1">Welcome, {{ student_name }}!</h2>
-      <p class="text-white-50 m-0 small">Logged in as: {{ student_email }}</p>
+{% block title %}Student Academic Portal | ExamGuard-AI{% endblock %}
+
+{% block head %}
+<style>
+  .class-card {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .class-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-glowing-green) !important;
+    box-shadow: var(--shadow-glow-green);
+  }
+  .token-badge-gateway {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--accent-green);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+  }
+  .modal-content-danger {
+    background: rgba(20, 8, 8, 0.95) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    border-radius: var(--radius-lg) !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-custom sticky-top mb-4">
+  <div class="container-fluid d-flex align-items-center justify-content-between">
+    <a class="navbar-brand text-gradient-green" href="#">
+      <i class="bi bi-mortarboard-fill"></i> Candidate Portal
+    </a>
+    <div class="d-flex align-items-center gap-3">
+      <span class="me-2 text-muted small d-none d-sm-inline">ID: {{ student_email }}</span>
+      <a href="/logout" class="btn btn-danger-custom py-2 px-3">
+        <i class="bi bi-power"></i> Exit Portal
+      </a>
     </div>
+  </div>
+</nav>
 
-    {% if request.args.get('error') %}
-    <div class="alert alert-danger bg-danger-subtle text-danger border-danger-subtle small py-2 mb-4" role="alert">
-      ⚠️ {{ request.args.get('error') }}
+<!-- Main Container -->
+<div class="container py-2 animate-fade-in">
+  
+  <!-- Welcome Banner -->
+  <div class="card glass-panel text-white p-4 mb-4">
+    <h2 class="fw-bold text-gradient-green mb-1">Welcome, {{ student_name }}!</h2>
+    <p class="text-muted m-0 small">Candidate identity verification active. Session verified.</p>
+  </div>
+
+  {% if request.args.get('error') %}
+  <div class="alert alert-danger bg-danger-subtle text-danger border-danger-subtle small py-2 mb-4 rounded-3" role="alert">
+    <i class="bi bi-exclamation-triangle-fill"></i> {{ request.args.get('error') }}
+  </div>
+  {% endif %}
+
+  <!-- Join Classroom Panel -->
+  <div class="card glass-panel p-4 mb-5 border-success border-opacity-10">
+    <h5 class="fw-bold text-white mb-2 fs-6 text-uppercase tracking-wider">Connect to a New Environment</h5>
+    <p class="text-muted small mb-3">Input the secure 6-letter matrix token provided by your proctor manager.</p>
+    
+    <form action="/join-classroom" method="POST" class="row g-3 align-items-center">
+      <div class="col-sm-8 col-md-4">
+        <input type="text" name="class_code" class="form-control-custom fw-bold tracking-widest text-uppercase text-success font-mono" placeholder="e.g. SEC99X" maxlength="6" required autocomplete="off">
+      </div>
+      <div class="col-sm-4">
+        <button type="submit" class="btn btn-success-custom w-100 py-3 fw-bold">
+          <i class="bi bi-link-45deg"></i> Join Classroom
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Enrolled Classrooms Grid -->
+  <h4 class="fw-bold text-white mb-4 fs-5">Your Enrolled Class Ecosystems</h4>
+  <div class="row g-4">
+    {% if not my_classes %}
+    <div class="col-12">
+      <div class="text-center py-5 glass-panel bg-opacity-10 border border-secondary border-opacity-10">
+        <div class="fs-1 text-muted mb-3"><i class="bi bi-folder-symlink"></i></div>
+        <h5 class="text-white-50">No active class connections found</h5>
+        <p class="text-muted small mb-0">Input a classroom token sequence above to route connection access links.</p>
+      </div>
     </div>
     {% endif %}
 
-    <div class="card glass-panel p-4 mb-5 border-success border-opacity-20">
-      <h5 class="fw-bold text-white mb-2 fs-6 text-uppercase tracking-wider">Connect to a New Environment</h5>
-      <p class="text-white-50 small mb-3">Input the secure 6-letter matrix token provided by your core admin instruction manager.</p>
-      
-      <form action="/join-classroom" method="POST" class="row g-3 max-width-md">
-        
-        <div class="col-sm-8 col-md-4">
-          <input type="text" name="class_code" class="form-control bg-dark text-success border-secondary fw-bold tracking-widest text-uppercase" placeholder="e.g. SEC99X" maxlength="6" required>
-        </div>
-        <div class="col-sm-4">
-          <button type="submit" class="btn btn-success w-100 px-4 fw-bold">Join Classroom</button>
-        </div>
-      </form>
-    </div>
-
-    <h4 class="fw-bold text-white mb-3 fs-5">Your Enrolled Class Ecosystems</h4>
-    <div class="row g-4">
-      {% if not my_classes %}
-      <div class="col-12">
-        <p class="text-white-50 small bg-dark bg-opacity-20 p-4 rounded border border-secondary text-center">No active class nodes found. Input a token sequence above to route connection access links.</p>
-      </div>
-      {% endif %}
-
-      {% for class in my_classes %}
-      <div class="col-md-4">
-        <div class="card glass-panel p-4 h-100 d-flex flex-column justify-content-between class-card" style="cursor: pointer;" onclick="window.location.href='/student/classroom/{{ class.token }}'">
-          <div>
-            <span class="badge bg-success text-dark mb-2 small fw-bold">{{ class.token }}</span>
-            <h5 class="fw-bold text-white mb-2 text-truncate">{{ class.name }}</h5>
+    {% for class in my_classes %}
+    <div class="col-md-4">
+      <div class="card glass-panel p-4 h-100 d-flex flex-column justify-content-between class-card" style="cursor: pointer;" onclick="window.location.href='/student/classroom/{{ class.token }}'">
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="token-badge-gateway">{{ class.token }}</span>
+            <span class="badge-custom badge-green font-mono py-1 px-2.5" style="font-size: 0.7rem;"><span class="pulse-dot"></span> Joined</span>
           </div>
-          <div class="d-flex justify-content-between align-items-center mt-3">
-            <span class="text-white-50 small">Roster Connection: <span class="text-success">Verified</span></span>
-            <span class="text-success small fw-bold">Launch Room &rarr;</span>
-          </div>
+          <h5 class="fw-bold text-white mb-2 text-truncate">{{ class.name }}</h5>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary border-opacity-10">
+          <span class="text-muted small">Session Verified</span>
+          <span class="text-success small fw-bold">Launch Room &rarr;</span>
         </div>
       </div>
-      {% endfor %}
     </div>
-
+    {% endfor %}
   </div>
-  <script>
-  // --- 15-MINUTE INACTIVITY LOCKOUT MONITOR ---
-(function() {
-  // 15 Minutes calculated to milliseconds: 15 * 60 * 1000
-  const INACTIVITY_TIMEOUT = 15 * 60 * 1000; 
-  let idleTimer;
 
-  function terminateSessionRedirect() {
-    alert("Session expired due to 15 minutes of inactivity. Please re-authenticate.");
-    // Force direct client redirection to clear session hooks via backend logout route
-    window.location.href = '/logout'; 
-  }
-
-  function resetIdleCountdown() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(terminateSessionRedirect, INACTIVITY_TIMEOUT);
-  }
-
-  // Monitor basic physical UI input parameters
-  window.addEventListener('load', resetIdleCountdown);
-  window.addEventListener('mousemove', resetIdleCountdown);
-  window.addEventListener('mousedown', resetIdleCountdown); 
-  window.addEventListener('keypress', resetIdleCountdown);
-  window.addEventListener('scroll', resetIdleCountdown);
-  window.addEventListener('touchstart', resetIdleCountdown);
-})();
-</script>
+</div>
 
 <!-- Device Warning Modal -->
 {% if device_warning %}
-<div class="modal fade show d-block" id="deviceModal" tabindex="-1" style="background:rgba(0,0,0,.7);">
+<div class="modal fade show d-block" id="deviceModal" tabindex="-1" style="background: rgba(3, 5, 11, 0.85); backdrop-filter: blur(8px);">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="background:linear-gradient(135deg,#1e0a0a,#7f1d1d);border:1px solid rgba(239,68,68,.5);">
-      <div class="modal-header border-0">
-        <h5 class="modal-title fw-bold text-danger">📱 Mobile Device Detected</h5>
+    <div class="modal-content modal-content-danger p-2">
+      <div class="modal-header border-0 pb-1">
+        <h5 class="modal-title fw-bold text-danger fs-5">📱 Mobile Device Detected</h5>
       </div>
-      <div class="modal-body text-white">
-        <p>This examination platform is <strong>designed for desktop or laptop computers</strong>. Using a mobile or tablet device may affect camera proctoring, fullscreen enforcement, and exam stability.</p>
-        <p class="text-warning small mb-0">⚠️ Please switch to a desktop or laptop for the best and most secure experience before proceeding.</p>
+      <div class="modal-body text-white py-3">
+        <p class="mb-3">This examination platform is <strong>designed for desktop or laptop computers</strong>. Using a mobile or tablet device may affect camera proctoring, fullscreen enforcement, and exam stability.</p>
+        <div class="p-3 rounded-3" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);">
+          <p class="text-warning small mb-0 fw-bold">⚠️ Please switch to a desktop or laptop for the best and most secure experience before proceeding.</p>
+        </div>
       </div>
-      <div class="modal-footer border-0">
-        <button class="btn btn-danger px-4 fw-bold" onclick="ackDevice()">I Understand — Continue Anyway</button>
+      <div class="modal-footer border-0 pt-1">
+        <button class="btn btn-danger-custom w-100 fw-bold py-2" onclick="ackDevice()">I Understand — Continue Anyway</button>
       </div>
     </div>
   </div>
@@ -133,6 +140,4 @@ function ackDevice(){
 }
 </script>
 {% endif %}
-
-</body>
-</html>
+{% endblock %}
