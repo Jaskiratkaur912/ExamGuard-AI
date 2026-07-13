@@ -1,7 +1,15 @@
 import os, json, re, random, datetime, time
 from functools import wraps
 from flask import (Flask, render_template, request, jsonify,
-                   redirect, url_for, session, send_from_directory)
+                   redirect, url_for, session, send_from_directory,
+                   Response, send_file)
+import io, csv
+try:
+    import openpyxl
+    from openpyxl.utils import get_column_letter
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
 from flask_socketio import SocketIO, join_room, leave_room, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -173,12 +181,14 @@ from collections import Counter
 from datetime import datetime
 
 
-def calculate_student_risk(student_email):
+def calculate_student_risk(student_email, events=None):
     """
     Calculates overall cheating risk score.
+    Pass `events` explicitly to score against a filtered subset
+    (e.g. only violations tied to one classroom's exams).
     """
 
-    events = BROWSER_EVENTS.get(student_email, [])
+    events = BROWSER_EVENTS.get(student_email, []) if events is None else events
 
     score = 0
 
@@ -370,6 +380,103 @@ def classroom_statistics():
 
     return report
 
+# ==========================================================
+# CLASSROOM-SCOPED REPORT BUILDERS (used by the Reports tab)
+# ==========================================================
+
+def _classroom_enrolled_students(token):
+    tok = token.upper()
+    return [e for e, toks in STUDENT_ENROLLMENTS.items() if tok in toks]
+
+def _classroom_exam_ids(token):
+    tok = token.upper()
+    return {e['id'] for e in EXAM_PAPERS_DATABASE.get(tok, [])}
+
+def _classroom_events_by_student(token):
+    """Browser/proctoring events for this classroom's students, restricted
+    to violations that occurred during one of this classroom's exams."""
+    exam_ids = _classroom_exam_ids(token)
+    out = {}
+    for email in _classroom_enrolled_students(token):
+        out[email] = [e for e in BROWSER_EVENTS.get(email, []) if e.get('exam_id') in exam_ids]
+    return out
+
+def get_classroom_overview(token):
+    tok = token.upper()
+    ed  = EXAM_DATABASE.get(tok, {})
+    return {
+        "students":      len(_classroom_enrolled_students(tok)),
+        "exams":         len(EXAM_PAPERS_DATABASE.get(tok, [])),
+        "activities":    len(ACTIVITY_LOGS.get(tok, [])),
+        "assignments":   len(ed.get('assigned_assignments', [])),
+        "deadlines":     len(ed.get('deadlines', [])),
+        "announcements": len(ed.get('announcements', [])),
+        "recordings":    len(RECORDINGS_DATABASE.get(tok, [])),
+    }
+
+def get_classroom_submission_stats(token):
+    tok      = token.upper()
+    students = _classroom_enrolled_students(tok)
+    exam_ids = _classroom_exam_ids(tok)
+    submitted = late = 0
+    for email in students:
+        for eid, sub in EXAM_SUBMISSIONS_DB.get(email, {}).items():
+            if eid in exam_ids:
+                submitted += 1
+                if sub.get('late'): late += 1
+    total_possible = len(students) * len(exam_ids)
+    pending = max(0, total_possible - submitted)
+    return {"submitted": submitted, "late": late, "pending": pending}
+
+def get_classroom_login_stats(token):
+    today = datetime.now().date()
+    daily = weekly = monthly = 0
+    for email in _classroom_enrolled_students(token):
+        for log in LOGIN_HISTORY.get(email, []):
+            try:
+                d = datetime.strptime(log["timestamp"], "%Y-%m-%d %H:%M:%S").date()
+            except Exception:
+                continue
+            if d == today: daily += 1
+            if (today - d).days <= 7: weekly += 1
+            if d.month == today.month and d.year == today.year: monthly += 1
+    return {"daily": daily, "weekly": weekly, "monthly": monthly}
+
+def get_classroom_cheating_breakdown(token):
+    counter = Counter()
+    for events in _classroom_events_by_student(token).values():
+        for item in events:
+            counter[item["type"]] += 1
+    return dict(counter)
+
+def get_classroom_defaulters(token):
+    data = []
+    events_by_student = _classroom_events_by_student(token)
+    for email in _classroom_enrolled_students(token):
+        user   = USER_DATABASE.get(email, {})
+        events = events_by_student.get(email, [])
+        risk   = calculate_student_risk(email, events=events)
+        data.append({
+            "student":    user.get("full_name", email.split('@')[0]),
+            "email":      email,
+            "violations": len(events),
+            "risk":       risk["level"],
+            "score":      risk["score"],
+        })
+    data.sort(key=lambda x: x["score"], reverse=True)
+    return data
+
+def build_classroom_report(token):
+    tok = token.upper()
+    return {
+        "overview":    get_classroom_overview(tok),
+        "submissions": get_classroom_submission_stats(tok),
+        "logins":      get_classroom_login_stats(tok),
+        "cheating":    get_classroom_cheating_breakdown(tok),
+        "defaulters":  get_classroom_defaulters(tok),
+        "generated_at": _now(),
+    }
+
 # ─────────────────────────────────────────────
 # VALIDATION HELPERS
 # ─────────────────────────────────────────────
@@ -420,7 +527,8 @@ def sync_exam_panels(token: str):
         "upcoming":              upcoming,
         "assigned_exams":        live,
         "assigned_assignments":  existing.get("assigned_assignments", []),
-        "deadlines":             closed
+        "deadlines":             closed,
+        "announcements":         existing.get("announcements", [])
     }
 
 # ─────────────────────────────────────────────
@@ -644,7 +752,7 @@ def classroom_home(token):
     if not classroom: return "Access Denied or Not Found", 403
     tok = token.upper()
     sync_exam_panels(tok)
-    exams_data  = EXAM_DATABASE.get(tok, {"upcoming":[],"assigned_exams":[],"assigned_assignments":[],"deadlines":[]})
+    exams_data  = EXAM_DATABASE.get(tok, {"upcoming":[],"assigned_exams":[],"assigned_assignments":[],"deadlines":[],"announcements":[]})
     pdf_bank    = EXAM_DATABASE.get(f"{tok}_PDFS", [])
     activities  = ACTIVITY_LOGS.get(tok, [])
     recordings  = RECORDINGS_DATABASE.get(tok, [])
@@ -664,12 +772,26 @@ def post_assignment(token):
     dl   = request.form.get('deadline', '').strip()
     kind = request.form.get('kind', 'assignment')
     if not text: return redirect(url_for('classroom_home', token=tok))
-    label = text + (f"  |  Due: {dl}" if dl else "")
-    EXAM_DATABASE.setdefault(tok, {"upcoming":[],"assigned_exams":[],"assigned_assignments":[],"deadlines":[]})
-    if kind == 'deadline':
-        EXAM_DATABASE[tok].setdefault('deadlines', []).append(label)
+    EXAM_DATABASE.setdefault(tok, {"upcoming":[],"assigned_exams":[],"assigned_assignments":[],"deadlines":[],"announcements":[]})
+    if kind == 'announcement':
+        # Announcements are stored as structured entries so the board can be
+        # rendered richly (author, posted time, optional target date) and
+        # kept in sync with the student-facing classroom.
+        EXAM_DATABASE[tok].setdefault('announcements', []).append({
+            "text":      text,
+            "deadline":  dl,
+            "posted_at": _now(),
+            "author":    USER_DATABASE.get(session['user_email'], {}).get('full_name', 'Admin')
+        })
+        log_activity(tok, f"Admin posted a public announcement: \"{text[:80]}\"")
     else:
-        EXAM_DATABASE[tok].setdefault('assigned_assignments', []).append(label)
+        label = text + (f"  |  Due: {dl}" if dl else "")
+        if kind == 'deadline':
+            EXAM_DATABASE[tok].setdefault('deadlines', []).append(label)
+            log_activity(tok, f"Admin added a deadline alert: \"{text[:80]}\"")
+        else:
+            EXAM_DATABASE[tok].setdefault('assigned_assignments', []).append(label)
+            log_activity(tok, f"Admin posted a new assignment task: \"{text[:80]}\"")
     save_system_data()
     return redirect(url_for('classroom_home', token=tok))
 
@@ -680,11 +802,24 @@ def delete_assignment(token):
     kind  = request.form.get('kind', 'assignment')
     index = int(request.form.get('index', -1))
     if tok in EXAM_DATABASE:
-        key   = 'deadlines' if kind == 'deadline' else 'assigned_assignments'
+        key   = {'deadline': 'deadlines', 'announcement': 'announcements'}.get(kind, 'assigned_assignments')
         items = EXAM_DATABASE[tok].get(key, [])
         if 0 <= index < len(items): items.pop(index)
     save_system_data()
     return redirect(url_for('classroom_home', token=tok))
+
+@app.route('/classroom/<token>/activity-logs.json')
+@require_role('admin')
+def activity_logs_json(token):
+    """Polled by the Activity Logs panel to stream in new entries live,
+    and to pick up anything logged since midnight on a fresh day."""
+    if not owned_classroom(token, session['user_email']): return jsonify({"success": False}), 403
+    tok = token.upper()
+    since = request.args.get('since', '')  # ISO-ish "YYYY-MM-DD HH:MM:SS" of the last entry the client has
+    activities = ACTIVITY_LOGS.get(tok, [])
+    if since:
+        activities = [a for a in activities if a["timestamp"] > since]
+    return jsonify({"success": True, "activities": activities, "total": len(ACTIVITY_LOGS.get(tok, []))})
 
 # ─────────────────────────────────────────────
 # FORENSIC: ADMIN LOGS VIEWS
@@ -756,6 +891,78 @@ def delete_exam(token, exam_id):
     sync_exam_panels(tok)
     save_system_data()
     return redirect(url_for('classroom_home', token=tok))
+
+# ─────────────────────────────────────────────
+# REPORTS TAB
+# ─────────────────────────────────────────────
+@app.route('/classroom/<token>/reports')
+@require_role('admin')
+def classroom_reports(token):
+    classroom = owned_classroom(token, session['user_email'])
+    if not classroom: return "Access Denied", 403
+    tok    = token.upper()
+    report = build_classroom_report(tok)
+    return render_template('reports.html', classroom=classroom, report=report,
+                           token=tok, openpyxl_available=OPENPYXL_AVAILABLE)
+
+def _rows_for_report(kind, report):
+    if kind == 'overview':
+        headers = ['Metric', 'Value']
+        rows = [[k.replace('_', ' ').title(), v] for k, v in report['overview'].items()]
+    elif kind == 'submissions':
+        headers = ['Status', 'Count']
+        s = report['submissions']
+        rows = [['Submitted', s['submitted']], ['Late', s['late']], ['Pending', s['pending']]]
+    elif kind == 'logins':
+        headers = ['Period', 'Logins']
+        l = report['logins']
+        rows = [['Today', l['daily']], ['Last 7 Days', l['weekly']], ['This Month', l['monthly']]]
+    elif kind == 'cheating':
+        headers = ['Violation Type', 'Count']
+        rows = [[k.replace('_', ' ').title(), v] for k, v in report['cheating'].items()]
+    elif kind == 'defaulters':
+        headers = ['Student', 'Email', 'Violations', 'Risk Level', 'Risk Score']
+        rows = [[d['student'], d['email'], d['violations'], d['risk'], d['score']] for d in report['defaulters']]
+    else:
+        headers, rows = ['Error'], [['Unknown report type']]
+    return headers, rows
+
+@app.route('/classroom/<token>/reports/export/<kind>.<fmt>')
+@require_role('admin')
+def export_classroom_report(token, kind, fmt):
+    classroom = owned_classroom(token, session['user_email'])
+    if not classroom: return "Access Denied", 403
+    tok            = token.upper()
+    report         = build_classroom_report(tok)
+    headers, rows  = _rows_for_report(kind, report)
+    safe_name      = re.sub(r'[^A-Za-z0-9_-]+', '_', classroom['name'])
+    fname_base     = f"{safe_name}_{kind}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    if fmt == 'csv':
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(headers)
+        writer.writerows(rows)
+        return Response(buf.getvalue(), mimetype='text/csv',
+                         headers={'Content-Disposition': f'attachment; filename="{fname_base}.csv"'})
+    elif fmt == 'xlsx':
+        if not OPENPYXL_AVAILABLE:
+            return ("Excel export requires the 'openpyxl' package on the server. "
+                    "Install it with: pip install openpyxl — or use the CSV export instead.", 501)
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = kind.title()[:31]
+        ws.append(headers)
+        for r in rows: ws.append(r)
+        for i, h in enumerate(headers, start=1):
+            ws.column_dimensions[get_column_letter(i)].width = max(14, len(str(h)) + 4)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name=f"{fname_base}.xlsx",
+                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    else:
+        return "Unsupported export format", 400
 
 # ─────────────────────────────────────────────
 # SECURE QUESTION DELIVERY  (JWT-gated PDF serve)
@@ -924,7 +1131,7 @@ def student_classroom_home(token):
     if not classroom: return "Not found", 404
     name  = USER_DATABASE.get(email, {}).get('full_name', email.split('@')[0])
     sync_exam_panels(tok)
-    exams_data  = EXAM_DATABASE.get(tok, {"upcoming":[],"assigned_exams":[],"assigned_assignments":[],"deadlines":[]})
+    exams_data  = EXAM_DATABASE.get(tok, {"upcoming":[],"assigned_exams":[],"assigned_assignments":[],"deadlines":[],"announcements":[]})
     pdf_bank    = EXAM_DATABASE.get(f"{tok}_PDFS", [])
     recordings  = [r for r in RECORDINGS_DATABASE.get(tok, []) if r.get('shared')]
     exam_papers = EXAM_PAPERS_DATABASE.get(tok, [])
