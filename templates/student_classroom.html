@@ -4,240 +4,551 @@
 
 {% block head %}
 <style>
-  .stat-box {
+  /* ── Sidebar & Layout Architecture (mirrors Admin Console) ─────── */
+  body {
+    background: radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 15% 75%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
+                #0b0d19 !important;
+    background-attachment: fixed !important;
+  }
+
+  .dashboard-wrapper {
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .admin-sidebar {
+    width: 260px;
+    background: rgba(8, 10, 22, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1030;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-top: 20px;
+  }
+
+  .main-content-area {
+    flex: 1;
+    margin-left: 260px;
+    padding: 2rem;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .centered-stream {
+    max-width: 1150px;
+    margin: 0 auto;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
     transition: all 0.2s ease;
+    border-left: 3px solid transparent;
   }
-  .stat-box:hover {
-    border-color: rgba(255, 255, 255, 0.12) !important;
-    background-color: rgba(255, 255, 255, 0.02) !important;
+
+  .sidebar-link:hover, .sidebar-link.active {
+    color: var(--accent-emerald, #10b981);
+    background: rgba(16, 185, 129, 0.05);
+    border-left-color: var(--accent-emerald, #10b981);
   }
-  .exam-card-student {
-    border: 1px solid var(--border-primary) !important;
-    background: rgba(255, 255, 255, 0.01) !important;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+
+  .glass-panel {
+    background: rgba(20, 24, 46, 0.45) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px !important;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                border-color 0.3s ease;
   }
-  .exam-card-student:hover {
-    border-color: var(--border-glowing-green) !important;
-    box-shadow: var(--shadow-glow-green);
+
+  .glass-panel:hover {
+    transform: translateY(-4px);
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(16, 185, 129, 0.05);
+  }
+
+  .glass-panel p.text-muted,
+  .glass-panel .text-muted.small {
+    color: #ffffff !important;
+    opacity: 0.85;
+  }
+
+  @media (max-width: 991.98px) {
+    .admin-sidebar {
+      transform: translateX(-100%);
+    }
+    .admin-sidebar.show {
+      transform: translateX(0);
+    }
+    .main-content-area {
+      margin-left: 0;
+      padding: 1.25rem;
+    }
+  }
+
+  /* ── Content Panes & Scrollbar Customization ───────────────────── */
+  .scroll-pane {
+    max-height: 220px;
+    overflow-y: auto;
   }
   .resource-row {
-    border-bottom: 1px solid var(--border-primary) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
     transition: background-color 0.2s ease;
   }
   .resource-row:hover {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: rgba(255, 255, 255, 0.03);
   }
-  .scroll-pane {
-    max-height: 200px;
+
+  /* ── Announcement Bulletin Board ─────────────────────────────────── */
+  #announcement-section {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(20, 24, 46, 0.45) 55%) !important;
+    position: relative;
+    overflow: hidden;
+  }
+  #announcement-section::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .announce-scroll {
+    max-height: 420px;
     overflow-y: auto;
+    padding-right: 4px;
+  }
+  .announce-card {
+    background: linear-gradient(160deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 17, 33, 0.75) 60%);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    border-left: 3px solid var(--accent-emerald, #10b981);
+    border-radius: 10px;
+    padding: 14px 16px;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .announce-card:hover {
+    transform: translateX(3px);
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.08);
+  }
+  .announce-pin {
+    position: absolute;
+    top: -8px;
+    left: 14px;
+    font-size: 0.9rem;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+  }
+  .announce-meta {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+  .announce-new-badge {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    animation: pulseGlow 1.8s ease-in-out infinite;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+    50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+  }
+
+  /* ── Exam Control Matrix Elements (student-specific, live-updating) ── */
+  .exam-card-student {
+    background: rgba(15, 23, 42, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .exam-card-student:hover {
+    border-color: rgba(16, 185, 129, 0.35) !important;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.12);
+  }
+
+  /* ── Loom-Style Video Grid Infrastructure ───────────────────────── */
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .video-card {
+    background: rgba(15, 23, 42, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .video-card:hover {
+    border-color: var(--accent-emerald, #10b981) !important;
+  }
+  .thumbnail-wrapper {
+    position: relative;
+    aspect-ratio: 16/9;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .video-placeholder-icon {
+    font-size: 2.5rem;
+    color: rgba(255, 255, 255, 0.15);
+  }
+  .play-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(9, 13, 22, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .video-card:hover .play-overlay {
+    opacity: 1;
+  }
+  .play-overlay i {
+    font-size: 3rem;
+    color: var(--accent-emerald, #10b981);
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
+  }
+  .video-info {
+    padding: 14px;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-custom sticky-top mb-4">
-  <div class="container-fluid d-flex align-items-center justify-content-between">
-    <span class="navbar-brand text-gradient-green">
-      <i class="bi bi-mortarboard-fill"></i> Candidate Workspace
-    </span>
-    <a href="/student-dashboard" class="btn btn-secondary-custom py-2 px-3">
-      <i class="bi bi-chevron-left"></i> Return to Gateway
-    </a>
-  </div>
-</nav>
+<div class="dashboard-wrapper">
 
-<div class="container py-2 animate-fade-in">
-  
-  <!-- Welcome Banner -->
-  <div class="card glass-panel p-4 rounded-4 shadow-lg mb-4 border-success border-opacity-10">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-      <div>
-        <span class="badge-custom badge-green font-mono text-uppercase mb-2">CONNECTED_NODE: {{ classroom.token }}</span>
-        <h1 class="display-6 fw-bold text-white mb-1 font-mono">Welcome, {{ student_name }}!</h1>
-        <h4 class="fw-bold text-success mb-2" style="font-size: 1.25rem;">{{ classroom.name }}</h4>
-        <p class="fs-6 text-muted font-mono m-0">Synchronized inside this environment terminal block. Live entry corridors, assessments, and asset pools are loaded.</p>
-      </div>
+  <!-- ── Student Sidebar Drawer ───────────────────────────────────── -->
+  <aside class="admin-sidebar" id="studentSidebar">
+    <div class="px-4 mb-4 d-flex align-items-center justify-content-between">
+      <a class="navbar-brand text-gradient-emerald fw-bold d-flex align-items-center gap-2" href="/">
+        <i class="bi bi-shield-check fs-4"></i>
+        <span>ExamGuard-AI</span>
+      </a>
+      <button class="btn d-lg-none text-white p-0" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
     </div>
-  </div>
 
-  <!-- Live Corridor -->
-  <div class="card glass-panel p-4 rounded-4 shadow-lg mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3" style="border-color: rgba(56, 189, 248, 0.3) !important; box-shadow: var(--shadow-glow-cyan);">
-    <div>
-      <h5 class="fw-bold text-white font-mono mb-1">🔴 Live Session Feed</h5>
-      <p class="text-muted small font-mono m-0">Connect to the active interactive RTC matrix when initialized by the supervisor node.</p>
+    <div class="px-4 mb-4">
+      <span class="text-uppercase tracking-wider text-muted font-mono" style="font-size: 0.65rem;">Student Terminal</span>
     </div>
-    <a href="/meet/{{ classroom.token }}" class="btn btn-primary-custom py-2.5 px-4 text-white" style="background: linear-gradient(135deg, var(--accent-cyan) 0%, #0891b2 100%); border: none; box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);">
-      <i class="bi bi-camera-video-fill"></i> Join Meet Room
-    </a>
-  </div>
 
-  <!-- Summary Metrics Row -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="card glass-panel p-3 h-100 rounded-3 stat-box border-opacity-10">
-        <h6 class="fw-bold font-mono text-cyan mb-2 d-flex align-items-center gap-1">
-          <span>📅 Scheduled</span>
-          {% if exams.upcoming %}<span class="badge-custom badge-blue font-mono ms-auto">{{ exams.upcoming|length }}</span>{% endif %}
-        </h6>
-        <div class="scroll-pane font-mono">
-          {% if not exams.upcoming %}
-            <p class="text-muted fst-italic p-1 m-0" style="font-size: 0.8rem;">No upcoming items.</p>
-          {% endif %}
-          {% for item in exams.upcoming %}
-            <div class="p-2.5 mb-2 rounded bg-dark bg-opacity-30 border border-secondary border-opacity-10 text-white-50 lh-sm" style="font-size: 0.75rem;">{{ item }}</div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card glass-panel p-3 h-100 rounded-3 stat-box border-success border-opacity-10">
-        <h6 class="fw-bold font-mono text-success mb-2 d-flex align-items-center gap-1">
-          <span>🚀 Live Matrix</span>
-          {% if exams.assigned_exams %}<span class="badge-custom badge-green font-mono ms-auto">{{ exams.assigned_exams|length }}</span>{% endif %}
-        </h6>
-        <div class="scroll-pane font-mono">
-          {% if not exams.assigned_exams %}
-            <p class="text-muted fst-italic p-1 m-0" style="font-size: 0.8rem;">No active instances.</p>
-          {% endif %}
-          {% for item in exams.assigned_exams %}
-            <div class="p-2 mb-2 bg-success bg-opacity-5 rounded border border-success border-opacity-20 text-success fw-bold lh-sm" style="font-size: 0.75rem;">{{ item }}</div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card glass-panel p-3 h-100 rounded-3 stat-box border-warning border-opacity-10">
-        <h6 class="fw-bold font-mono text-warning mb-2 d-flex align-items-center gap-1">
-          <span>📝 Tasks</span>
-          {% if exams.assigned_assignments %}<span class="badge-custom badge-amber font-mono ms-auto">{{ exams.assigned_assignments|length }}</span>{% endif %}
-        </h6>
-        <div class="scroll-pane font-mono">
-          {% if not exams.assigned_assignments %}
-            <p class="text-muted fst-italic p-1 m-0" style="font-size: 0.8rem;">No tasks posted.</p>
-          {% endif %}
-          {% for item in exams.assigned_assignments %}
-            <div class="p-2 mb-2 rounded bg-dark bg-opacity-30 border border-secondary border-opacity-10 text-white-50 lh-sm" style="font-size: 0.75rem;">{{ item }}</div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card glass-panel p-3 h-100 rounded-3 stat-box border-danger border-opacity-10">
-        <h6 class="fw-bold font-mono text-danger mb-2 d-flex align-items-center gap-1">
-          <span>⚠️ Thresholds</span>
-          {% if exams.deadlines %}<span class="badge-custom badge-red font-mono ms-auto">{{ exams.deadlines|length }}</span>{% endif %}
-        </h6>
-        <div class="scroll-pane font-mono">
-          {% if not exams.deadlines %}
-            <p class="text-muted fst-italic p-1 m-0" style="font-size: 0.8rem;">No parameters set.</p>
-          {% endif %}
-          {% for item in exams.deadlines %}
-            <div class="p-2 mb-2 bg-danger bg-opacity-5 rounded border border-danger border-opacity-20 text-danger fw-bold lh-sm" style="font-size: 0.75rem;">{{ item }}</div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
+    <nav class="d-flex flex-column gap-1">
+      <a href="#live-section" class="sidebar-link active"><i class="bi bi-broadcast"></i> Live Session</a>
+      <a href="#announcement-section" class="sidebar-link"><i class="bi bi-pin-angle-fill"></i> Announcements</a>
+      <a href="#overview-section" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+      <a href="#exams-section" class="sidebar-link"><i class="bi bi-file-earmark-text"></i> Exam Modules</a>
+      <a href="#repository-section" class="sidebar-link"><i class="bi bi-folder-fill"></i> Resources</a>
+      <a href="#recordings-section" class="sidebar-link"><i class="bi bi-camera-video-fill"></i> Recordings</a>
 
-  <!-- Exam Modules -->
-  <div class="card glass-panel p-4 rounded-4 shadow-lg mb-4 border-success border-opacity-10">
-    <h5 class="fw-bold text-white font-mono mb-3"><i class="bi bi-file-text-fill text-success"></i> Exam Modules & Question Papers</h5>
-    <div id="exam-list-area">
-      {% if not exam_papers %}
-        <p class="text-muted small font-mono fst-italic mb-0 py-3 text-center">No assessment parameters have been pushed to this node cluster yet.</p>
-      {% endif %}
-      {% for paper in exam_papers %}
-        <div class="exam-card-student p-3 mb-2 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2"
-             data-start="{{ paper.start_time }}" data-duration="{{ paper.duration_minutes }}"
-             data-exam-id="{{ paper.id }}" data-token="{{ classroom.token }}">
-          <div class="font-mono">
-            <h6 class="fw-bold text-white mb-1">{{ '📄' if paper.type == 'pdf' else '🧩' }} {{ paper.title }}</h6>
-            <small class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-calendar3"></i> Timeline: {{ paper.start_time.replace('T', ' ') }} · <i class="bi bi-clock"></i> Duration: {{ paper.duration_minutes }}m · Format: {{ paper.type|upper }}</small>
-            <div class="exam-status small fw-bold mt-1 text-cyan">Checking verification loops…</div>
+      <div class="border-top border-secondary border-opacity-10 my-3"></div>
+
+      <a href="/student-dashboard" class="sidebar-link text-white-50"><i class="bi bi-chevron-left"></i> Exit Corridor</a>
+    </nav>
+  </aside>
+
+  <!-- ── Main Workspace Arena ─────────────────────────────────────── -->
+  <main class="main-content-area">
+    <div class="centered-stream animate-fade-in">
+
+      <!-- Top Action Navbar Header -->
+      <nav class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 pb-2" style="border-bottom: 1px solid var(--border-primary);">
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-outline-secondary d-lg-none py-1.5 px-2.5 text-white" onclick="toggleSidebar()">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <span class="text-white fw-bold font-mono text-uppercase tracking-wider fs-6"><i class="bi bi-shield-check text-cyan"></i> Student Examination Workspace</span>
+        </div>
+        <a href="/student-dashboard" class="btn btn-secondary-custom py-2 px-3 small">
+          <i class="bi bi-box-arrow-left"></i> Exit Corridor
+        </a>
+      </nav>
+
+      <!-- Welcome / Classroom Instance Information Card -->
+      <div class="card glass-panel text-white p-4 mb-4 border-success border-opacity-10" style="background: linear-gradient(135deg, rgba(20, 24, 46, 0.7) 0%, rgba(15, 30, 25, 0.4) 100%) !important;">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <span class="badge-custom badge-green mb-2 font-mono text-uppercase tracking-wider">CONNECTED NODE: {{ classroom.token }}</span>
+            <h1 class="fw-bold text-white mb-1" style="font-size: 2rem; letter-spacing: -0.03em;">Welcome back, {{ student_name }}!</h1>
+            <h5 class="fw-semibold text-success mb-1" style="font-size: 1.1rem;">{{ classroom.name }}</h5>
+            <p class="text-muted m-0 small d-block">Synchronized inside this environment terminal. Live entry corridors, assessments, and asset pools are loaded.</p>
           </div>
-          <button class="btn btn-secondary-custom px-4 py-2.5 enter-exam-btn" style="font-size: 0.85rem;" disabled>Pipeline Offline</button>
         </div>
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- PDF shared files bank -->
-  <div class="card glass-panel p-4 rounded-4 shadow-lg mb-4 border-success border-opacity-10">
-    <h5 class="fw-bold text-white font-mono mb-3"><i class="bi bi-folder-fill text-success"></i> Shared Reference Materials</h5>
-    <div class="border p-2 rounded-3 scroll-pane font-mono text-white-50 bg-dark bg-opacity-20 border-opacity-10" style="border-color: var(--border-primary) !important;">
-      {% if not pdf_bank %}
-        <div class="p-3 text-center text-muted small fst-italic">No resource files mounted to this sector.</div>
-      {% endif %}
-      {% for pdf in pdf_bank %}
-        <div class="p-2.5 resource-row d-flex justify-content-between align-items-center text-white" style="font-size: 0.85rem;">
-          <span class="text-truncate pe-2">📄 {{ pdf.name }}</span>
-          <a href="#" class="btn btn-sm btn-secondary-custom py-1 px-3 text-cyan border-opacity-30">Access Node &rarr;</a>
-        </div>
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- Class Recordings table view -->
-  <div class="card glass-panel p-4 rounded-4 shadow-lg mb-4 border-success border-opacity-10">
-    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-      <div class="d-flex align-items-center gap-2">
-        <span class="font-mono text-purple"><i class="bi bi-shield-lock"></i> SECURE_ARCHIVE_NODE</span>
-        <h5 class="fw-bold m-0 font-mono text-white">|| Deployed Recordings</h5>
       </div>
-      <span class="badge-custom badge-green font-mono">
-        {{ recordings|length }} Block(s) Shared
-      </span>
-    </div>
 
-    <p class="text-muted small font-mono mb-4">
-      Authorized session records distributed from the remote media cluster. Only verified streaming feeds signed by the supervisor node are unlocked for candidate playback.
-    </p>
+      <!-- Live Session Feed -->
+      <div id="live-section" class="card glass-panel p-4 mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 border-cyan border-opacity-20" style="background: linear-gradient(90deg, rgba(20,24,46,0.6) 0%, rgba(6,182,212,0.05) 100%) !important;">
+        <div>
+          <h5 class="fw-bold text-white mb-1"><i class="bi bi-broadcast text-cyan"></i> Live Session Feed</h5>
+          <p class="text-muted small m-0 d-block">Connect to the active interactive RTC matrix when initialized by the supervisor node.</p>
+        </div>
+        <a href="/meet/{{ classroom.token }}" class="btn btn-success-custom py-2.5 px-4">
+          <i class="bi bi-camera-video-fill"></i> Join Meet Room
+        </a>
+      </div>
 
-    <div class="table-responsive">
-      <table class="table table-dark table-hover align-middle font-mono m-0" style="--bs-table-bg: transparent; border-color: var(--border-primary);">
-        <thead>
-          <tr class="text-white-50" style="font-size: 0.8rem; border-bottom: 2px solid var(--border-primary);">
-            <th scope="col" class="pb-3">SESSION ARCHIVE REF</th>
-            <th scope="col" class="pb-3">INDEXED TIMESTAMP</th>
-            <th scope="col" class="pb-3 text-end">ACTION PIPELINE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for rec in recordings %}
-          <tr class="resource-row">
-            <td class="py-3 text-white fw-bold truncate" style="max-width: 320px;">
-              🎬 {{ rec.filename }}
-            </td>
-            <td class="py-3 text-muted" style="font-size: 0.85rem;">
-              {{ rec.timestamp }}
-            </td>
-            <td class="py-3 text-end">
-              <a href="/recordings/{{ classroom.token }}/{{ rec.filename }}" class="btn btn-sm btn-success-custom py-1.5 px-3" download>
-                <i class="bi bi-download"></i> Decrypt Stream
-              </a>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="3" class="text-center py-4 text-muted small fst-italic">
-              No validated archives released by the supervisor node cluster.
-            </td>
-          </tr>
+      <!-- ── Announcement Bulletin Board Section ────────────────────── -->
+      <div id="announcement-section" class="card glass-panel p-4 mb-4 border-cyan border-opacity-20">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+          <h5 class="fw-bold text-white mb-0 fs-6 text-uppercase text-gradient-emerald"><i class="bi bi-pin-angle-fill"></i> Official Broadcasts</h5>
+          {% if exams.announcements %}<span class="badge-custom badge-cyan font-mono">{{ exams.announcements|length }} pinned</span>{% endif %}
+        </div>
+        <p class="text-muted small mb-3 d-block">Broadcasts from your supervisor node, synced live to this workspace.</p>
+
+        <div class="announce-scroll">
+          <div class="row g-3">
+            {% if not exams.announcements %}
+              <div class="col-12 text-center text-muted py-4 border border-secondary border-opacity-10 rounded bg-dark bg-opacity-10">
+                <i class="bi bi-megaphone fs-3 d-block mb-2 text-cyan opacity-50"></i>
+                No public priority announcements have been posted yet. Check back soon.
+              </div>
+            {% endif %}
+            {% for ann in exams.announcements %}
+              <div class="col-md-6">
+                <div class="announce-card h-100">
+                  <span class="announce-pin">📌</span>
+                  <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <span class="badge-custom badge-cyan font-mono small text-uppercase">
+                      <i class="bi bi-broadcast"></i> Broadcast
+                    </span>
+                    <span class="announce-new-badge" data-posted="{{ ann.posted_at if ann is mapping else '' }}" style="display:none;">New</span>
+                  </div>
+                  <p class="m-0 text-white" style="word-break: break-word; font-size: 0.9rem; line-height: 1.5;">
+                    {% if ann is mapping %}{{ ann.text }}{% else %}{{ ann }}{% endif %}
+                  </p>
+                  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                    <span class="announce-meta">
+                      <i class="bi bi-person-badge"></i> {{ ann.author if ann is mapping and ann.author else 'Admin' }}
+                      {% if ann is mapping and ann.posted_at %} · {{ ann.posted_at }}{% endif %}
+                    </span>
+                    {% if ann is mapping and ann.deadline %}
+                      <span class="announce-meta text-amber"><i class="bi bi-calendar-check"></i> Target: {{ ann.deadline.replace('T', ' ') }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Overview Metric Clusters ─────────────────────────────────── -->
+      <div id="overview-section" class="mb-4">
+        <h4 class="fw-bold text-white mb-3 fs-5 text-uppercase tracking-wider text-cyan"><i class="bi bi-speedometer2"></i> Operational Overview</h4>
+
+        <div class="row g-3">
+          <!-- Scheduled -->
+          <div class="col-md-3">
+            <div class="card glass-panel p-3 h-100 border-info border-opacity-20">
+              <h6 class="fw-bold text-white mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-event text-cyan"></i> Scheduled</span>
+                <span class="badge-custom badge-blue font-mono">{{ exams.upcoming|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.upcoming %}
+                  <p class="text-muted fst-italic p-1 m-0">No upcoming items.</p>
+                {% endif %}
+                {% for item in exams.upcoming %}
+                  <div class="p-2.5 mb-2 bg-dark bg-opacity-30 rounded border border-info border-opacity-10 text-white-50 lh-sm">{{ item }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Now -->
+          <div class="col-md-3">
+            <div class="card glass-panel p-3 h-100 border-success border-opacity-20">
+              <h6 class="fw-bold text-success mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-broadcast"></i> Live Matrix</span>
+                <span class="badge-custom badge-green font-mono">{{ exams.assigned_exams|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.assigned_exams %}
+                  <p class="text-muted fst-italic p-1 m-0">No active instances.</p>
+                {% endif %}
+                {% for item in exams.assigned_exams %}
+                  <div class="p-2.5 mb-2 bg-success bg-opacity-5 rounded border border-success border-opacity-25 text-success lh-sm">{{ item }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Tasks -->
+          <div class="col-md-3">
+            <div class="card glass-panel p-3 h-100 border-warning border-opacity-20">
+              <h6 class="fw-bold text-warning mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark-check"></i> Tasks</span>
+                <span class="badge-custom badge-amber font-mono">{{ exams.assigned_assignments|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.assigned_assignments %}
+                  <p class="text-muted fst-italic p-1 m-0">No tasks posted.</p>
+                {% endif %}
+                {% for item in exams.assigned_assignments %}
+                  <div class="p-2 mb-2 bg-dark bg-opacity-30 rounded border border-warning border-opacity-10 text-white-50 lh-sm">{{ item }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Thresholds / Deadlines -->
+          <div class="col-md-3">
+            <div class="card glass-panel p-3 h-100 border-danger border-opacity-20">
+              <h6 class="fw-bold text-danger mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-exclamation-octagon"></i> Thresholds</span>
+                <span class="badge-custom badge-red font-mono">{{ exams.deadlines|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.deadlines %}
+                  <p class="text-muted fst-italic p-1 m-0">No parameters set.</p>
+                {% endif %}
+                {% for item in exams.deadlines %}
+                  <div class="p-2 mb-2 bg-danger bg-opacity-5 rounded border border-danger border-opacity-20 text-danger fw-bold lh-sm">{{ item }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exam Modules and Deployed System Targets -->
+      <div id="exams-section" class="card glass-panel p-4 mb-4 border-info border-opacity-10">
+        <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase"><i class="bi bi-file-earmark-text text-cyan"></i> Exam Modules &amp; Question Papers</h5>
+        <p class="text-muted small mb-3 d-block">Assessments pushed to this node cluster, unlocking automatically at their scheduled window.</p>
+        <div id="exam-list-area">
+          {% if not exam_papers %}
+            <div class="p-4 text-center text-muted">No assessment parameters have been pushed to this node cluster yet.</div>
+          {% endif %}
+          {% for paper in exam_papers %}
+            <div class="exam-card-student p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2"
+                 data-start="{{ paper.start_time }}" data-duration="{{ paper.duration_minutes }}"
+                 data-exam-id="{{ paper.id }}" data-token="{{ classroom.token }}">
+              <div>
+                <h6 class="fw-bold text-white mb-1">{% if paper.type == 'pdf' %}📄{% else %}🧩{% endif %} {{ paper.title }}</h6>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                  <span class="badge-custom badge-cyan font-mono py-0.5 px-2" style="font-size: 0.65rem;">{{ paper.type|upper }}</span>
+                  <span class="text-muted small"><i class="bi bi-calendar3"></i> Starts: {{ paper.start_time.replace('T', ' ') }}</span>
+                  <span class="text-muted small"><i class="bi bi-clock"></i> Duration: {{ paper.duration_minutes }} min</span>
+                </div>
+                <div class="exam-status small fw-bold mt-1 text-cyan">Checking verification loops…</div>
+              </div>
+              <button class="btn btn-secondary-custom px-4 py-2.5 enter-exam-btn" disabled>Pipeline Offline</button>
+            </div>
           {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+        </div>
+      </div>
 
+      <!-- Shared Document Asset Pool -->
+      <div id="repository-section" class="card glass-panel p-4 mb-4 border-info border-opacity-10">
+        <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase"><i class="bi bi-folder-fill text-cyan"></i> Shared Reference Materials</h5>
+        <p class="text-muted small mb-3 d-block">Reference documentation and static guideline files shared by your supervisor node.</p>
+        <div class="scroll-pane border border-secondary border-opacity-10 p-2 rounded bg-dark bg-opacity-20 small text-white-50">
+          {% if not pdf_bank %}
+            <div class="p-4 text-center text-muted">No resource files mounted to this sector.</div>
+          {% endif %}
+          {% for pdf in pdf_bank %}
+            <div class="p-2 resource-row d-flex justify-content-between align-items-center text-white">
+              <span class="text-truncate pe-2">📄 {{ pdf.name }}</span>
+              <a href="#" class="text-cyan text-decoration-none small">Access Node &rarr;</a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Meet Recordings Section (Loom-style Video Grid) -->
+      <div id="recordings-section" class="card glass-panel p-4 mb-4 border-success border-opacity-10">
+        <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+          <h5 class="fw-bold text-white mb-0 fs-6 text-uppercase"><i class="bi bi-camera-video text-success"></i> Secure Archive Node</h5>
+          <span class="badge-custom badge-green font-mono">{{ recordings|length }} shared</span>
+        </div>
+        <p class="text-muted small mb-3 d-block">Authorized session records distributed from the remote media cluster. Only verified streaming feeds signed by the supervisor node are unlocked for playback.</p>
+
+        {% if not recordings %}
+          <div class="text-center text-muted py-5 border border-dashed border-secondary border-opacity-20 rounded-3">
+            <i class="bi bi-camera-video fs-2 opacity-30 mb-2 d-block"></i>
+            <p class="small m-0">No shared lecture or exam screen streams have been deployed yet.</p>
+          </div>
+        {% else %}
+          <div class="video-grid">
+            {% for rec in recordings %}
+            <div class="video-card">
+              <div class="thumbnail-wrapper">
+                <i class="bi bi-camera-video video-placeholder-icon"></i>
+                <span class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 text-white-50 px-2 py-0.5 rounded-1 m-2 fw-medium" style="font-size: 0.7rem;">ARCHIVE_STREAM</span>
+                <a href="/recordings/{{ classroom.token }}/{{ rec.filename }}" class="play-overlay" download>
+                  <i class="bi bi-play-circle-fill"></i>
+                </a>
+              </div>
+              <div class="video-info">
+                <h6 class="text-white text-truncate mb-1 fw-semibold" title="{{ rec.filename }}">{{ rec.filename }}</h6>
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                  <small class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-clock me-1"></i>{{ rec.timestamp }}</small>
+                  <a href="/recordings/{{ classroom.token }}/{{ rec.filename }}" class="btn btn-sm btn-primary-custom py-1 px-2.5" style="font-size: 0.75rem;" download>
+                    <i class="bi bi-download"></i> Get File
+                  </a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </main>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  function toggleSidebar() {
+    document.getElementById('studentSidebar').classList.toggle('show');
+  }
+
+  const sidebarLinks = document.querySelectorAll('.sidebar-link');
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      sidebarLinks.forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+      if (window.innerWidth < 992) toggleSidebar();
+    });
+  });
+
+  // Flag announcements posted in the last 24h as "New"
+  document.querySelectorAll('.announce-new-badge').forEach(badge => {
+    const posted = badge.dataset.posted;
+    if (!posted) return;
+    const postedDate = new Date(posted.replace(' ', 'T'));
+    if (isNaN(postedDate)) return;
+    const hoursAgo = (Date.now() - postedDate.getTime()) / 36e5;
+    if (hoursAgo >= 0 && hoursAgo <= 24) badge.style.display = 'inline-block';
+  });
+
   // Countdowns and gate locks
   const examCards = document.querySelectorAll('.exam-card-student');
   const alertedExams = new Set();
@@ -262,29 +573,32 @@
 
       if (now < start) {
         const msToStart = start - now;
-        statusEl.textContent = `Corridor unlocks in ${formatRemaining(msToStart)}`;
+        statusEl.innerHTML = `<i class="bi bi-lock-fill me-1 text-cyan"></i> Corridor unlocks in ${formatRemaining(msToStart)}`;
         statusEl.style.color = 'var(--accent-cyan)';
         btn.disabled = true;
-        btn.className = 'btn btn-secondary-custom px-4 py-2.5 enter-exam-btn';
-        btn.textContent = 'Locked';
+        btn.classList.remove('btn-success-custom');
+        btn.classList.add('btn-secondary-custom');
+        btn.textContent = 'Locked Node';
 
         if (msToStart <= 10 * 60 * 1000 && !alertedExams.has(examId)) {
           alertedExams.add(examId);
-          statusEl.textContent = `⚠️ Initialization Sequence Ready — Unlocks in ${formatRemaining(msToStart)}`;
+          statusEl.innerHTML = `<span>⚠️ Initialization Sequence Ready — Unlocks in ${formatRemaining(msToStart)}</span>`;
           statusEl.style.color = 'var(--accent-amber)';
           showGetReadyBanner(card.querySelector('h6').textContent.trim(), msToStart);
         }
       } else if (now >= start && now <= end) {
-        statusEl.textContent = `🟢 Environment Live — ${formatRemaining(end - now)} remaining`;
-        statusEl.style.color = 'var(--accent-green)';
+        statusEl.innerHTML = `<span class="text-success">●</span> Environment Live — ${formatRemaining(end - now)} remaining`;
+        statusEl.style.color = 'var(--accent-emerald)';
         btn.disabled = false;
-        btn.className = 'btn btn-success-custom px-4 py-2.5 enter-exam-btn';
+        btn.classList.remove('btn-secondary-custom');
+        btn.classList.add('btn-success-custom');
         btn.textContent = 'Enter Exam Workspace';
       } else {
-        statusEl.textContent = 'Operational window has closed.';
+        statusEl.innerHTML = `<i class="bi bi-x-circle-fill me-1 text-danger"></i> Operational window has closed.`;
         statusEl.style.color = 'var(--accent-red)';
         btn.disabled = true;
-        btn.className = 'btn btn-secondary-custom px-4 py-2.5 enter-exam-btn';
+        btn.classList.remove('btn-success-custom');
+        btn.classList.add('btn-secondary-custom');
         btn.textContent = 'Terminated';
       }
     });
@@ -292,7 +606,7 @@
 
   function showGetReadyBanner(title, msToStart) {
     const banner = document.createElement('div');
-    banner.className = 'alert fw-bold position-fixed top-0 start-50 translate-middle-x mt-3 shadow-lg font-mono text-dark';
+    banner.className = 'alert fw-bold position-fixed top-0 start-50 translate-middle-x mt-3 shadow-lg text-dark animate-fade-in';
     banner.style.zIndex = 2000;
     banner.style.backgroundColor = 'var(--accent-amber)';
     banner.style.borderColor = 'var(--accent-amber)';
