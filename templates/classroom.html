@@ -1,401 +1,820 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ classroom.name }} | Admin Terminal</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background-color: #0f172a; color: #fff; }
-    .glass-panel {
-      background: linear-gradient(135deg, rgba(15, 32, 67, 0.6), rgba(30, 64, 175, 0.35));
-      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
+{% extends "base.html" %}
+
+{% block title %}{{ classroom.name }} | Admin Console | ExamGuard-AI{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Sidebar & Layout Architecture ──────────────────────────────── */
+  body {
+    background: radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 15% 75%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
+                #0b0d19 !important;
+    background-attachment: fixed !important;
+  }
+
+  .dashboard-wrapper {
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  .admin-sidebar {
+    width: 260px;
+    background: rgba(8, 10, 22, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1030;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-top: 20px;
+  }
+
+  .main-content-area {
+    flex: 1;
+    margin-left: 260px;
+    padding: 2rem;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .centered-stream {
+    max-width: 1150px;
+    margin: 0 auto;
+  }
+
+  .split-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+  }
+
+  .sidebar-link:hover, .sidebar-link.active {
+    color: var(--accent-cyan);
+    background: rgba(6, 182, 212, 0.04);
+    border-left-color: var(--accent-cyan);
+  }
+
+  .glass-panel {
+    background: rgba(20, 24, 46, 0.45) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                border-color 0.3s ease;
+  }
+  
+  .glass-panel:hover {
+    transform: translateY(-4px);
+    border-color: rgba(245, 158, 11, 0.25);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.03);
+  }
+
+  .glass-panel p.text-muted,
+  .glass-panel .text-muted.small {
+    color: #ffffff !important;
+    opacity: 0.85;
+  }
+
+  @media (max-width: 991.98px) {
+    .admin-sidebar {
+      transform: translateX(-100%);
     }
-    .scroll-pane { max-height: 200px; overflow-y: auto; }
-    .status-indicator { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
-  </style>
-</head>
-<body>
+    .admin-sidebar.show {
+      transform: translateX(0);
+    }
+    .main-content-area {
+      margin-left: 0;
+      padding: 1.25rem;
+    }
+    .split-content-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 
-  <nav class="navbar glass-panel sticky-top mb-4 px-4">
-    <div class="container-fluid d-flex justify-content-between">
-      <span class="navbar-brand fw-bold text-info fs-5">⚡ Admin Environment Suite</span>
-      <a href="/admin-dashboard" class="btn btn-outline-light btn-sm px-3">&larr; Return to Dashboard</a>
+  /* ── Content Panes & Scrollbar Customization ───────────────────── */
+  .scroll-pane {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .log-pane {
+    height: 300px;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    color: var(--accent-amber);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(245, 158, 11, 0.15);
+  }
+  .log-entry-text {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .exam-list-item {
+    border-bottom: 1px solid var(--border-primary);
+    transition: background 0.2s ease;
+  }
+  .exam-list-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  /* ── Telemetry Matrix Calendar Engine ─────────────────────────── */
+  .calendar-container {
+    background: rgba(13, 17, 33, 0.7);
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    text-align: center;
+  }
+  .calendar-day-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 4px;
+  }
+  .calendar-cell {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    padding: 6px 0;
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  .calendar-cell.empty {
+    background: transparent;
+    opacity: 0;
+  }
+  .calendar-cell.today {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    font-weight: bold;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+  }
+  .calendar-cell.has-deadline {
+    background: rgba(245, 158, 11, 0.18) !important;
+    color: #ffb03a !important;
+    font-weight: 700;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+    cursor: pointer;
+  }
+  .calendar-cell.has-deadline::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background-color: var(--accent-amber);
+    border-radius: 50%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- ── Admin Sidebar Drawer ──────────────────────────────────────── -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="px-4 mb-4 d-flex align-items-center justify-content-between">
+      <a class="navbar-brand text-gradient-cyan fw-bold d-flex align-items-center gap-2" href="/">
+        <i class="bi bi-shield-check fs-4"></i>
+        <span>ExamGuard-AI</span>
+      </a>
+      <button class="btn d-lg-none text-white p-0" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
     </div>
-  </nav>
-
-  <div class="container py-2">
-    <div class="card glass-panel text-white p-4 rounded shadow-lg mb-4">
-      <span class="badge bg-info text-dark mb-2 fw-bold align-self-start">MANAGEMENT INTERFACE: {{ classroom.token }}</span>
-      <h1 class="fw-bold text-white mb-1">{{ classroom.name }}</h1>
-      <p class="text-white-50 m-0 small">Operational data fields and student resource control tracks are loaded.</p>
+    
+    <div class="px-4 mb-4">
+      <span class="text-uppercase tracking-wider text-muted font-mono" style="font-size: 0.65rem;">Environment Core</span>
     </div>
 
-    <div class="card glass-panel p-4 rounded shadow-lg mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3" style="border-color: rgba(34, 197, 94, 0.3) !important;">
-      <div>
-        <h5 class="fw-bold text-success mb-1">🔴 Live Class Meet</h5>
-        <p class="text-white-50 small m-0">Start a live session for this classroom. Students enrolled with token <strong class="text-info">{{ classroom.token }}</strong> can join once the room is open. You control recording.</p>
-      </div>
-      <a href="/meet/{{ classroom.token }}" class="btn btn-success px-4 fw-bold shadow flex-shrink-0">Start Meet Room</a>
-    </div>
+    <nav class="d-flex flex-column gap-1">
+      <a href="#activity-section" class="sidebar-link active"><i class="bi bi-clipboard2-data"></i> Activity Manager</a>
+      <a href="#announcement-section" class="sidebar-link"><i class="bi bi-pin-angle-fill"></i> Bulletin Board</a>
+      <a href="#logs-section" class="sidebar-link"><i class="bi bi-terminal-fill"></i> Telemetry Logs</a>
+      <a href="#matrix-section" class="sidebar-link"><i class="bi bi-file-earmark-text"></i> Assessment Matrix</a>
+      <a href="#post-section" class="sidebar-link"><i class="bi bi-megaphone"></i> Post Content</a>
+      <a href="#repository-section" class="sidebar-link"><i class="bi bi-folder-fill"></i> Resource Repo</a>
+      <a href="#recordings-section" class="sidebar-link"><i class="bi bi-camera-video-fill"></i> Meet Streams</a>
+      
+      <div class="border-top border-secondary border-opacity-10 my-3"></div>
+      
+      <a href="/admin-dashboard" class="sidebar-link text-white-50"><i class="bi bi-chevron-left"></i> Exit Suite</a>
+    </nav>
+  </aside>
 
-    <div class="card glass-panel p-4 rounded shadow-lg mb-4" style="border-color: rgba(96, 165, 250, 0.3) !important;">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-        <div>
-          <h5 class="fw-bold text-info mb-1">📝 Exams &amp; MCQ Tests</h5>
-          <p class="text-white-50 small m-0">Upload a PDF question paper or build an MCQ test, then set when it opens for students.</p>
+  <!-- ── Main Workspace Arena ─────────────────────────────────────── -->
+  <main class="main-content-area">
+    <div class="centered-stream animate-fade-in">
+      
+      <!-- Top Action Navbar Header -->
+      <nav class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 pb-2" style="border-bottom: 1px solid var(--border-primary);">
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-outline-secondary d-lg-none py-1.5 px-2.5 text-white" onclick="toggleSidebar()">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <span class="text-white fw-bold font-mono text-uppercase tracking-wider fs-6"><i class="bi bi-shield-lock-fill text-cyan"></i> Operational Terminal Suite</span>
         </div>
-        <button class="btn btn-info px-4 fw-bold shadow flex-shrink-0" data-bs-toggle="modal" data-bs-target="#createExamModal">+ New Exam / Test</button>
+        <a href="/admin-dashboard" class="btn btn-secondary-custom py-2 px-3 small">
+          <i class="bi bi-chevron-left"></i> Return to Dashboard
+        </a>
+      </nav>
+
+      <!-- Classroom Instance Information Card -->
+      <div class="card glass-panel text-white p-4 mb-4 border-info border-opacity-10" style="background: linear-gradient(135deg, rgba(20, 24, 46, 0.7) 0%, rgba(30, 27, 22, 0.4) 100%) !important;">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <span class="badge-custom badge-cyan mb-2 font-mono text-uppercase tracking-wider">ENVIRONMENT TOKEN: {{ classroom.token }}</span>
+            <h1 class="fw-bold text-white mb-1" style="font-size: 2.2rem; letter-spacing: -0.03em;">{{ classroom.name }}</h1>
+            <p class="text-muted m-0 small d-block">Secure control space fully synchronized with streaming core instances.</p>
+          </div>
+          <a href="/meet/{{ classroom.token }}" class="btn btn-success-custom py-2.5 px-4">
+            <i class="bi bi-camera-video-fill"></i> Start Live Meet
+          </a>
+        </div>
       </div>
 
-      <div class="border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50">
-        {% if not exam_papers %}
-          <div class="p-3 text-center text-muted">No exams or tests created for this classroom yet.</div>
-        {% endif %}
-        {% for paper in exam_papers %}
-          <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white flex-wrap gap-2">
-            <span>
-              {{ '📄' if paper.type == 'pdf' else '🧩' }} <strong>{{ paper.title }}</strong>
-              <span class="badge bg-secondary text-uppercase ms-2">{{ paper.type }}</span>
-              <span class="text-white-50 small ms-2">Starts {{ paper.start_time.replace('T', ' ') }} · {{ paper.duration_minutes }} min</span>
-            </span>
-            <div class="d-flex gap-2">
-              <a href="/classroom/{{ classroom.token }}/proctor/{{ paper.id }}" class="btn btn-sm btn-outline-warning">🔍 Monitor Live</a>
-              <form action="/classroom/{{ classroom.token }}/delete-exam/{{ paper.id }}" method="POST" onsubmit="return confirm('Delete this exam permanently?');">
-                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-              </form>
+      <!-- 1. Course Activity Management Row Cards -->
+      <div id="activity-section" class="mb-4">
+        <h4 class="fw-bold text-white mb-3 fs-5 text-uppercase tracking-wider text-cyan"><i class="bi bi-clipboard2-data"></i> Course Activity Management</h4>
+        
+        <div class="row g-3">
+          <!-- Upcoming -->
+          <div class="col-md-3">
+            <div class="card glass-panel p-3 h-100 border-info border-opacity-20">
+              <h6 class="fw-bold text-white mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-event text-cyan"></i> Upcoming</span>
+                <span class="badge-custom badge-blue font-mono">{{ exams.upcoming|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.upcoming %}
+                  <p class="text-muted fst-italic p-1 m-0">No scheduled exams.</p>
+                {% endif %}
+                {% for item in exams.upcoming %}
+                  <div class="p-2.5 mb-2 bg-dark bg-opacity-30 rounded border border-info border-opacity-10 text-white-50 lh-sm">{{ item }}</div>
+                {% endfor %}
+              </div>
             </div>
           </div>
-        {% endfor %}
-      </div>
-    </div>
 
-    <h4 class="fw-bold text-white mb-3 fs-5 text-uppercase tracking-wider text-info">📋 Exam & Assignment Management</h4>
-
-    {# Live panels — auto-populated from exam papers above; assignments posted below #}
-    <div class="row g-3 mb-3">
-
-      <div class="col-md-3">
-        <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-info mb-2 d-flex justify-content-between align-items-center">
-            📅 Upcoming <span class="badge bg-primary">{{ exams.upcoming|length }}</span>
-          </h6>
-          <div class="scroll-pane small text-white-50">
-            {% if not exams.upcoming %}
-              <p class="fst-italic p-1 m-0">No scheduled exams — create one above.</p>
-            {% endif %}
-            {% for item in exams.upcoming %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-info border-opacity-25 text-white lh-sm">{{ item }}</div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-success mb-2 d-flex justify-content-between align-items-center">
-            🚀 Live Now <span class="badge bg-success">{{ exams.assigned_exams|length }}</span>
-          </h6>
-          <div class="scroll-pane small text-white-50">
-            {% if not exams.assigned_exams %}
-              <p class="fst-italic p-1 m-0">No exams live right now.</p>
-            {% endif %}
-            {% for item in exams.assigned_exams %}
-              <div class="p-2 mb-1 bg-success bg-opacity-10 rounded border border-success border-opacity-25 text-success lh-sm">{{ item }}</div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-warning mb-2 d-flex justify-content-between align-items-center">
-            📝 Assignments <span class="badge bg-warning text-dark">{{ exams.assigned_assignments|length }}</span>
-          </h6>
-          <div class="scroll-pane small text-white-50">
-            {% if not exams.assigned_assignments %}
-              <p class="fst-italic p-1 m-0">No assignments posted — use the form below.</p>
-            {% endif %}
-            {% for item in exams.assigned_assignments %}
-              <div class="p-2 mb-1 bg-dark bg-opacity-30 rounded border border-warning border-opacity-25 text-white lh-sm d-flex justify-content-between align-items-start gap-2">
-                <span>{{ item }}</span>
-                <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" style="flex-shrink:0;">
-                  <input type="hidden" name="kind" value="assignment">
-                  <input type="hidden" name="index" value="{{ loop.index0 }}">
-                  <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:10px;" onclick="return confirm('Remove this assignment?')">✕</button>
-                </form>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="card glass-panel p-3 h-100">
-          <h6 class="fw-bold text-danger mb-2 d-flex justify-content-between align-items-center">
-            ⚠️ Deadlines <span class="badge bg-danger">{{ exams.deadlines|length }}</span>
-          </h6>
-          <div class="scroll-pane small text-white-50">
-            {% if not exams.deadlines %}
-              <p class="fst-italic p-1 m-0">No deadlines set — use the form below.</p>
-            {% endif %}
-            {% for item in exams.deadlines %}
-              <div class="p-2 mb-1 bg-danger bg-opacity-10 rounded border border-danger text-danger fw-bold lh-sm d-flex justify-content-between align-items-start gap-2">
-                <span>{{ item }}</span>
-                <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" style="flex-shrink:0;">
-                  <input type="hidden" name="kind" value="deadline">
-                  <input type="hidden" name="index" value="{{ loop.index0 }}">
-                  <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:10px;" onclick="return confirm('Remove this deadline?')">✕</button>
-                </form>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    {# Post a new assignment or deadline — students see this instantly #}
-    <div class="card glass-panel p-4 mb-4" style="border-color: rgba(250,204,21,0.3) !important;">
-      <h6 class="fw-bold text-warning mb-3 fs-6 text-uppercase">📢 Post Assignment or Deadline to Students</h6>
-      <form action="/classroom/{{ classroom.token }}/post-assignment" method="POST">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-5">
-            <label class="form-label text-white-50 small mb-1">Description</label>
-            <input type="text" name="assignment_text" class="form-control bg-dark text-white border-secondary"
-                   placeholder="e.g. Submit Chapter 3 notes" required>
-          </div>
+          <!-- Live Now -->
           <div class="col-md-3">
-            <label class="form-label text-white-50 small mb-1">Due Date (optional)</label>
-            <input type="datetime-local" name="deadline" class="form-control bg-dark text-white border-secondary">
+            <div class="card glass-panel p-3 h-100 border-success border-opacity-20">
+              <h6 class="fw-bold text-success mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-broadcast"></i> Live Now</span>
+                <span class="badge-custom badge-green font-mono">{{ exams.assigned_exams|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.assigned_exams %}
+                  <p class="text-muted fst-italic p-1 m-0">No active exams.</p>
+                {% endif %}
+                {% for item in exams.assigned_exams %}
+                  <div class="p-2.5 mb-2 bg-success bg-opacity-5 rounded border border-success border-opacity-25 text-success lh-sm">{{ item }}</div>
+                {% endfor %}
+              </div>
+            </div>
           </div>
-          <div class="col-md-2">
-            <label class="form-label text-white-50 small mb-1">Type</label>
-            <select name="kind" class="form-select bg-dark text-white border-secondary">
-              <option value="assignment">Assignment</option>
-              <option value="deadline">Deadline Alert</option>
-            </select>
+
+          <!-- Assignments -->
+          <div class="col-md-3">
+            <div class="card glass-panel p-3 h-100 border-warning border-opacity-20">
+              <h6 class="fw-bold text-warning mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark-check"></i> Assignments</span>
+                <span class="badge-custom badge-amber font-mono">{{ exams.assigned_assignments|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.assigned_assignments %}
+                  <p class="text-muted fst-italic p-1 m-0">No assignments posted.</p>
+                {% endif %}
+                {% for item in exams.assigned_assignments %}
+                  <div class="p-2 mb-2 bg-dark bg-opacity-30 rounded border border-warning border-opacity-10 text-white-50 lh-sm d-flex justify-content-between align-items-start gap-2 activity-data-row" data-date="{{ item.deadline if item is mapping else '' }}">
+                    <span class="text-truncate">{% if item is mapping %}{{ item.text }}{% else %}{{ item }}{% endif %}</span>
+                    <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" class="m-0 flex-shrink-0">
+                      <input type="hidden" name="kind" value="assignment">
+                      <input type="hidden" name="index" value="{{ loop.index0 }}">
+                      <button type="submit" class="btn btn-sm btn-danger-custom py-0 px-1.5" style="font-size:10px;" onclick="return confirm('Remove this assignment?')">✕</button>
+                    </form>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
           </div>
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-warning w-100 fw-bold">Post</button>
+
+          <!-- Deadlines -->
+          <div class="col-md-3">
+            <div class="card glass-panel p-3 h-100 border-danger border-opacity-20">
+              <h6 class="fw-bold text-danger mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-exclamation-octagon"></i> Deadlines</span>
+                <span class="badge-custom badge-red font-mono">{{ exams.deadlines|length }}</span>
+              </h6>
+              <div class="scroll-pane small text-white-50">
+                {% if not exams.deadlines %}
+                  <p class="text-muted fst-italic p-1 m-0">No deadlines.</p>
+                {% endif %}
+                {% for item in exams.deadlines %}
+                  <div class="p-2 mb-2 bg-danger bg-opacity-5 rounded border border-danger border-opacity-20 text-danger lh-sm d-flex justify-content-between align-items-start gap-2 activity-data-row" data-date="{{ item.deadline if item is mapping else '' }}">
+                    <span class="text-truncate">{% if item is mapping %}{{ item.text }}{% else %}{{ item }}{% endif %}</span>
+                    <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" class="m-0 flex-shrink-0">
+                      <input type="hidden" name="kind" value="deadline">
+                      <input type="hidden" name="index" value="{{ loop.index0 }}">
+                      <button type="submit" class="btn btn-sm btn-danger-custom py-0 px-1.5" style="font-size:10px;" onclick="return confirm('Remove this deadline?')">✕</button>
+                    </form>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Announcement Bulletin Board Section ────────────────────── -->
+      <div id="announcement-section" class="card glass-panel p-4 mb-4 border-cyan border-opacity-20">
+        <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase text-gradient-cyan"><i class="bi bi-pin-angle-fill"></i> Public Announcement Board</h5>
+        <p class="text-muted small mb-3 d-block">Broadcasted updates, resource links, and general environment notes visible to all members.</p>
+        
+        <div class="row g-3">
+          {% if not exams.announcements %}
+            <div class="col-12 text-center text-muted py-3 border border-secondary border-opacity-10 rounded bg-dark bg-opacity-10">
+              No classroom announcements shared yet. Use the form below to pin a new broadcast notice.
+            </div>
+          {% endif %}
+          {% for ann in exams.announcements %}
+            <div class="col-md-6">
+              <div class="p-3 bg-dark bg-opacity-40 rounded border border-info border-opacity-15 text-white position-relative h-100 activity-data-row" data-date="{{ ann.deadline if ann is mapping else '' }}">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                  <span class="badge-custom badge-cyan font-mono small text-uppercase">Broadcast</span>
+                  <form action="/classroom/{{ classroom.token }}/delete-assignment" method="POST" class="m-0">
+                    <input type="hidden" name="kind" value="announcement">
+                    <input type="hidden" name="index" value="{{ loop.index0 }}">
+                    <button type="submit" class="btn btn-sm text-muted hover-text-danger p-0 border-0 bg-transparent" onclick="return confirm('Remove this announcement permanently?')" style="line-height: 1;">✕</button>
+                  </form>
+                </div>
+                <p class="m-0 small text-white-50" style="word-break: break-word;">
+                  {% if ann is mapping %}{{ ann.text }}{% else %}{{ ann }}{% endif %}
+                </p>
+                {% if ann is mapping and ann.deadline %}
+                  <div class="mt-2 text-muted font-mono" style="font-size: 0.68rem;">
+                    <i class="bi bi-calendar-check"></i> Target: {{ ann.deadline.replace('T', ' ') }}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Split Content Grid ─────────────────────────────────────── -->
+      <div class="split-content-grid">
+        
+        <!-- Left Side: Center Content Stack -->
+        <div class="center-content-stack d-flex flex-column gap-4">
+          
+          <!-- Assessment Matrix Section -->
+          <div class="card glass-panel p-4 border-info border-opacity-10 m-0" id="matrix-section">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-1">
+              <div>
+                <h5 class="fw-bold text-white mb-1 fs-6"><i class="bi bi-file-earmark-text text-cyan"></i> Assessment Matrix</h5>
+                <p class="text-muted small m-0 d-block">Upload questions or inject direct MCQ mapping matrices.</p>
+              </div>
+              <button class="btn btn-primary-custom py-2 px-3 small fw-bold" data-bs-toggle="modal" data-bs-target="#createExamModal">
+                <i class="bi bi-plus-circle"></i> Create New Exam
+              </button>
+            </div>
+
+            <div class="border border-secondary border-opacity-10 rounded bg-dark bg-opacity-20 p-2 mt-3 text-white-50">
+              {% if not exam_papers %}
+                <div class="p-4 text-center text-muted">No exams or tests deployed in this environment yet.</div>
+              {% endif %}
+              {% for paper in exam_papers %}
+                <div class="p-3 exam-list-item d-flex justify-content-between align-items-center text-white flex-wrap gap-2 exam-data-row" data-date="{{ paper.start_time }}">
+                  <div class="d-flex align-items-center gap-3">
+                    <span class="fs-4">{{ '📄' if paper.type == 'pdf' else '🧩' }}</span>
+                    <div>
+                      <strong class="text-white d-block mb-1" style="font-size: 0.95rem;">{{ paper.title }}</strong>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge-custom badge-cyan font-mono py-0.5 px-2" style="font-size: 0.65rem;">{{ paper.type|upper }}</span>
+                        <span class="text-muted small"><i class="bi bi-calendar3"></i> Starts: {{ paper.start_time.replace('T', ' ') }}</span>
+                        <span class="text-muted small"><i class="bi bi-clock"></i> Duration: {{ paper.duration_minutes }} min</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <a href="/classroom/{{ classroom.token }}/proctor/{{ paper.id }}" class="btn btn-warning-custom btn-sm py-1.5 px-3 fw-bold small">
+                      <i class="bi bi-eye"></i> Monitor
+                    </a>
+                    <form action="/classroom/{{ classroom.token }}/delete-exam/{{ paper.id }}" method="POST" onsubmit="return confirm('Delete this exam permanently?');" class="m-0">
+                      <button type="submit" class="btn btn-danger-custom btn-sm py-1.5 px-3 fw-bold small">
+                        <i class="bi bi-trash"></i> Delete
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Post Content Panel (Updated Select Option) -->
+          <div class="card glass-panel p-4 border-warning border-opacity-10 m-0" id="post-section">
+            <h6 class="fw-bold text-warning mb-1 fs-6 text-uppercase"><i class="bi bi-megaphone"></i> Post Content, Task, or Announcement to Students</h6>
+            <p class="text-muted small mb-3 d-block">Dispatch interactive assignments, calendar milestone timelines, or bulletin alerts.</p>
+            
+            <form action="/classroom/{{ classroom.token }}/post-assignment" method="POST" class="m-0">
+              <div class="row g-3 align-items-end">
+                <div class="col-md-12">
+                  <label class="form-label text-muted small mb-1">Description / Content</label>
+                  <input type="text" name="assignment_text" class="form-control-custom" placeholder="Type assignment task detail or announcement update here..." required autocomplete="off">
+                </div>
+                <div class="col-sm-5">
+                  <label class="form-label text-muted small mb-1">Event Date (optional)</label>
+                  <input type="datetime-local" name="deadline" class="form-control-custom">
+                </div>
+                <div class="col-sm-4">
+                  <label class="form-label text-muted small mb-1">Post Context Category</label>
+                  <select name="kind" class="form-control-custom" style="padding-top: 10px; padding-bottom: 10px;">
+                    <option value="assignment">Assignment Task</option>
+                    <option value="deadline">Deadline Alert</option>
+                    <option value="announcement">Public Announcement</option>
+                  </select>
+                </div>
+                <div class="col-sm-3">
+                  <button type="submit" class="btn btn-warning-custom w-100 py-2.5 fw-bold">
+                    <i class="bi bi-send"></i> Post Item
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Resource Repository Drop Bank -->
+          <div class="card glass-panel p-4 border-info border-opacity-10 m-0" id="repository-section">
+            <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase"><i class="bi bi-folder-fill text-info"></i> Resource Repository</h5>
+            <p class="text-muted small mb-3 d-block">Upload and secure reference documentations or static guidelines files.</p>
+            
+            <form action="#" method="POST" enctype="multipart/form-data" class="d-flex gap-2 mb-3">
+              <input type="file" name="question_pdf" class="form-control-custom form-control-sm" accept=".pdf" required>
+              <button type="button" onclick="alert('Resource integrated successfully!')" class="btn btn-primary-custom px-4 fw-bold">Upload</button>
+            </form>
+
+            <div class="scroll-pane border border-secondary border-opacity-10 p-2 rounded bg-dark bg-opacity-20 small text-white-50">
+              {% if not pdf_bank %}
+                <div class="p-3 text-center text-muted">No resources shared.</div>
+              {% endif %}
+              {% for pdf in pdf_bank %}
+                <div class="p-2 border-bottom border-secondary border-opacity-10 d-flex justify-content-between align-items-center text-white">
+                  <span>📄 {{ pdf.name }}</span>
+                  <a href="#" class="text-info text-decoration-none small">Access &rarr;</a>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Meet Recordings Section -->
+          <div class="card glass-panel p-4 border-success border-opacity-10 m-0" id="recordings-section">
+            <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase"><i class="bi bi-camera-video text-success"></i> Meet Recordings</h5>
+            <p class="text-muted small mb-3 d-block">Captured sessions cataloged directly within this secure parameter cluster zone.</p>
+            
+            <div class="scroll-pane border border-secondary border-opacity-10 p-2 rounded bg-dark bg-opacity-20 small text-white-50">
+              {% if not recordings %}
+                <div class="p-3 text-center text-muted">No recordings captured.</div>
+              {% endif %}
+              {% for rec in recordings %}
+                <div class="p-2.5 border-bottom border-secondary border-opacity-10 d-flex justify-content-between align-items-center text-white flex-wrap gap-2">
+                  <span class="text-truncate" style="max-width: 240px;">🎬 {{ rec.filename }}</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <button type="button"
+                            class="btn btn-sm share-rec-btn py-1 px-2.5 fw-bold small {% if rec.shared %}btn-success-custom{% else %}btn-secondary-custom{% endif %}"
+                            data-token="{{ classroom.token }}" data-filename="{{ rec.filename }}" style="font-size: 0.75rem;">
+                      {{ 'Shared ✓' if rec.shared else 'Share' }}
+                    </button>
+                    <a href="/recordings/{{ classroom.token }}/{{ rec.filename }}" class="btn btn-sm btn-primary-custom py-1 px-2.5" style="font-size: 0.75rem;" download>
+                      <i class="bi bi-download"></i>
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Side: Activity Logs Telemetry & Calendar -->
+        <div class="right-logs-sidebar" id="logs-section">
+          <div class="d-flex flex-column gap-3 sticky-top" style="top: 2rem; z-index: 10;">
+            
+            <!-- Activity Logs Panel -->
+            <div class="card glass-panel p-4 border-warning border-opacity-10 m-0">
+              <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase"><i class="bi bi-terminal-fill text-warning"></i> Activity Logs</h5>
+              <p class="text-muted small mb-3 d-block">Live instance telemetry log events setup or configuration changes.</p>
+              
+              <div class="p-3 rounded log-pane">
+                {% if not activities %}
+                  <div class="text-muted small">[SYSTEM TELEMETRY]: Waiting for incoming data streams...</div>
+                {% endif %}
+                {% for act in activities %}
+                  <div class="mb-2 border-bottom border-secondary border-opacity-10 pb-2 log-entry-text">
+                    <span class="text-muted d-block font-mono mb-0.5" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+                      <i class="bi bi-clock-history"></i> {{ act.timestamp }}
+                    </span>
+                    <span style="color: var(--accent-amber); word-break: break-word;">&rarr; {{ act.log }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Operational Schedule Matrix (Highlights Active Deadlines) -->
+            <div class="card glass-panel p-4 border-info border-opacity-10 m-0">
+              <h5 class="fw-bold text-white mb-1 fs-6 text-uppercase"><i class="bi bi-calendar3-range text-cyan"></i> Deadline Tracker Matrix</h5>
+              <p class="text-muted small mb-3 d-block">Synchronized view highlighting upcoming environment criteria.</p>
+              
+              <div class="calendar-container">
+                <div class="text-center text-white small font-mono fw-bold mb-3 d-flex justify-content-between align-items-center px-1">
+                  <span id="calendar-month-year">Month Year</span>
+                  <span class="badge-custom badge-amber" style="font-size: 0.6rem;">DEADLINES GLOWING</span>
+                </div>
+                <div class="calendar-grid">
+                  <div class="calendar-day-label">M</div>
+                  <div class="calendar-day-label">T</div>
+                  <div class="calendar-day-label">W</div>
+                  <div class="calendar-day-label">T</div>
+                  <div class="calendar-day-label">F</div>
+                  <div class="calendar-day-label">S</div>
+                  <div class="calendar-day-label">S</div>
+                </div>
+                <div id="calendar-days-grid" class="calendar-grid mt-1">
+                  <!-- Generated dynamically via Javascript underneath -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+      <!-- ── End Split Grid ─────────────────────────────────────────── -->
+
+    </div>
+  </main>
+</div>
+
+<!-- Create Exam Modal Overlay -->
+<div class="modal fade" id="createExamModal" tabindex="-1" aria-hidden="true" style="background: rgba(3,5,11,0.85); backdrop-filter: blur(8px);">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content modal-content-custom">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title fw-bold text-gradient-cyan"><i class="bi bi-file-earmark-plus"></i> Initialize Assessment</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form action="/classroom/{{ classroom.token }}/create-exam" method="POST" enctype="multipart/form-data" id="exam-create-form" class="m-0">
+        <div class="modal-body p-4">
+          <div class="mb-4 d-flex gap-2">
+            <input type="radio" class="btn-check" name="exam_type" id="type-pdf" value="pdf" checked>
+            <label class="btn btn-secondary-custom flex-fill py-2.5 fw-bold" for="type-pdf"><i class="bi bi-filetype-pdf"></i> PDF Question Paper</label>
+            <input type="radio" class="btn-check" name="exam_type" id="type-mcq" value="mcq">
+            <label class="btn btn-secondary-custom flex-fill py-2.5 fw-bold" for="type-mcq"><i class="bi bi-patch-question"></i> MCQ Interactive Test</label>
+          </div>
+
+          <div class="form-group-custom">
+            <label class="form-label-custom">Exam Title</label>
+            <input type="text" name="title" class="form-control-custom" placeholder="e.g. Midterm Assessment" required autocomplete="off">
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6 form-group-custom">
+              <label class="form-label-custom">Start Date &amp; Time</label>
+              <input type="datetime-local" name="start_time" class="form-control-custom" required>
+            </div>
+            <div class="col-md-6 form-group-custom">
+              <label class="form-label-custom">Duration (minutes)</label>
+              <input type="number" name="duration_minutes" class="form-control-custom" value="60" min="5" required>
+            </div>
+          </div>
+
+          <div id="pdf-upload-area" class="form-group-custom">
+            <label class="form-label-custom">Upload Question Paper (PDF)</label>
+            <input type="file" name="exam_pdf" accept=".pdf" class="form-control-custom">
+          </div>
+
+          <div id="mcq-builder-area" class="d-none">
+            <label class="form-label-custom">MCQ Questions builder</label>
+            <div id="mcq-questions-list" class="d-flex flex-column gap-3"></div>
+            <button type="button" id="add-question-btn" class="btn btn-secondary-custom w-100 mt-3 py-2">
+              <i class="bi bi-plus"></i> Add Question Card
+            </button>
+          </div>
+
+        </div>
+        <div class="modal-footer modal-footer-custom">
+          <button type="button" class="btn btn-secondary-custom py-2.5 px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary-custom py-2.5 px-4 fw-bold">Create Exam</button>
         </div>
       </form>
     </div>
-
-    <div class="row g-4">
-      <div class="col-md-6">
-        <div class="card glass-panel p-4 h-100">
-          <h5 class="fw-bold text-info mb-2 fs-6 text-uppercase">📁 Question Bank (PDF Repository)</h5>
-          <p class="text-white-50 small mb-3">Upload and secure dynamic documentation resources, papers, and resource materials.</p>
-          
-          <form action="#" method="POST" enctype="multipart/form-data" class="d-flex gap-2 mb-3">
-            <input type="file" name="question_pdf" class="form-control form-control-sm bg-dark text-white border-secondary" accept=".pdf" required>
-            <button type="button" onclick="alert('File registry integrated successfully!')" class="btn btn-sm btn-info px-3 fw-bold">Upload</button>
-          </form>
-
-          <div class="scroll-pane border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50">
-            {% if not pdf_bank %}
-              <div class="p-2 text-center text-muted">No resource material PDFs deployed within this storage folder.</div>
-            {% endif %}
-            {% for pdf in pdf_bank %}
-              <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white">
-                <span>📄 {{ pdf.name }}</span>
-                <a href="#" class="text-info text-decoration-none small">Access File &darr;</a>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="card glass-panel p-4 h-100">
-          <h5 class="fw-bold text-warning mb-2 fs-6 text-uppercase">🔍 Live Activity Monitoring</h5>
-          <p class="text-white-50 small mb-3">System logs recording admin changes, curriculum creation, and session parameters.</p>
-          
-          <div class="scroll-pane border border-warning border-opacity-20 p-3 rounded bg-black bg-opacity-40 font-monospace text-warning small" style="height: 165px;">
-            {% if not activities %}
-              <div>[SYSTEM TELEMETRY]: Logging node silent. Waiting for network pipeline adjustments...</div>
-            {% endif %}
-            {% for act in activities %}
-              <div class="mb-1 text-truncate"><span class="text-white-50">[{{ act.timestamp }}]</span> -> {{ act.log }}</div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="row g-4 mt-1">
-      <div class="col-12">
-        <div class="card glass-panel p-4">
-          <h5 class="fw-bold text-success mb-2 fs-6 text-uppercase">🎥 Meet Recordings</h5>
-          <p class="text-white-50 small mb-3">Recordings captured from live meet sessions for this classroom. Stored on the server until cloud storage is connected.</p>
-          <div class="scroll-pane border border-secondary p-2 rounded bg-dark bg-opacity-20 small text-white-50">
-            {% if not recordings %}
-              <div class="p-2 text-center text-muted">No recordings saved yet for this classroom.</div>
-            {% endif %}
-            {% for rec in recordings %}
-              <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center text-white">
-                <span>🎬 {{ rec.filename }} <span class="text-white-50">({{ rec.timestamp }})</span></span>
-                <div class="d-flex align-items-center gap-2">
-                  <button type="button"
-                          class="btn btn-sm {{ 'btn-success' if rec.shared else 'btn-outline-secondary' }} share-rec-btn"
-                          data-token="{{ classroom.token }}" data-filename="{{ rec.filename }}">
-                    {{ 'Shared ✓' if rec.shared else 'Share with Students' }}
-                  </button>
-                  <a href="/recordings/{{ classroom.token }}/{{ rec.filename }}" class="text-success text-decoration-none small" download>Download &darr;</a>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
+</div>
+{% endblock %}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    document.querySelectorAll('.share-rec-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const token = btn.dataset.token;
-        const filename = btn.dataset.filename;
-        const formData = new FormData();
-        formData.append('token', token);
-        formData.append('filename', filename);
-        try {
-          const res = await fetch('/toggle-recording-share', { method: 'POST', body: formData });
-          const data = await res.json();
-          if (data.success) {
-            if (data.shared) {
-              btn.textContent = 'Shared ✓';
-              btn.classList.remove('btn-outline-secondary');
-              btn.classList.add('btn-success');
-            } else {
-              btn.textContent = 'Share with Students';
-              btn.classList.remove('btn-success');
-              btn.classList.add('btn-outline-secondary');
-            }
-          } else {
-            alert(data.message || 'Could not update sharing status.');
-          }
-        } catch (err) {
-          alert('Network error updating sharing status.');
-        }
-      });
+{% block scripts %}
+<script>
+  function toggleSidebar() {
+    document.getElementById('adminSidebar').classList.toggle('show');
+  }
+
+  const sidebarLinks = document.querySelectorAll('.sidebar-link');
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      sidebarLinks.forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+      if(window.innerWidth < 992) toggleSidebar();
     });
-  </script>  <div class="modal fade" id="createExamModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content text-white rounded p-3">
-        <div class="modal-header border-0">
-          <h5 class="modal-title fw-bold text-info fs-4">Create Exam / Test</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
+  });
 
-        <form action="/classroom/{{ classroom.token }}/create-exam" method="POST" enctype="multipart/form-data" id="exam-create-form">
-          <div class="modal-body">
-
-            <div class="mb-3 d-flex gap-2">
-              <input type="radio" class="btn-check" name="exam_type" id="type-pdf" value="pdf" checked>
-              <label class="btn btn-outline-info flex-fill" for="type-pdf">📄 PDF Question Paper</label>
-              <input type="radio" class="btn-check" name="exam_type" id="type-mcq" value="mcq">
-              <label class="btn btn-outline-info flex-fill" for="type-mcq">🧩 MCQ Test</label>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label text-info small fw-bold text-uppercase">Exam Title</label>
-              <input type="text" name="title" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Midterm Examination" required>
-            </div>
-
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <label class="form-label text-warning small fw-bold text-uppercase">Exam Start Date &amp; Time</label>
-                <input type="datetime-local" name="start_time" class="form-control bg-dark text-white border-secondary" required>
-                <small class="text-white-50">Students get a "get ready" alert 10 minutes before this.</small>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label text-warning small fw-bold text-uppercase">Duration (minutes)</label>
-                <input type="number" name="duration_minutes" class="form-control bg-dark text-white border-secondary" value="60" min="5" required>
-              </div>
-            </div>
-
-            <div id="pdf-upload-area" class="mb-3">
-              <label class="form-label text-info small fw-bold text-uppercase">Upload Question Paper (PDF)</label>
-              <input type="file" name="exam_pdf" accept=".pdf" class="form-control bg-dark text-white border-secondary">
-            </div>
-
-            <div id="mcq-builder-area" class="mb-3 d-none">
-              <label class="form-label text-info small fw-bold text-uppercase">MCQ Questions</label>
-              <div id="mcq-questions-list"></div>
-              <button type="button" id="add-question-btn" class="btn btn-sm btn-outline-info mt-2">+ Add Question</button>
-            </div>
-
-          </div>
-          <div class="modal-footer border-0">
-            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-info px-4 fw-bold">Create Exam</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const typePdfRadio = document.getElementById('type-pdf');
-    const typeMcqRadio = document.getElementById('type-mcq');
-    const pdfArea = document.getElementById('pdf-upload-area');
-    const mcqArea = document.getElementById('mcq-builder-area');
-    const mcqList = document.getElementById('mcq-questions-list');
-    const addQuestionBtn = document.getElementById('add-question-btn');
-    const examForm = document.getElementById('exam-create-form');
-    let questionCount = 0;
-
-    function toggleExamType() {
-      if (typeMcqRadio.checked) {
-        pdfArea.classList.add('d-none');
-        mcqArea.classList.remove('d-none');
-        document.querySelector('input[name="exam_pdf"]').removeAttribute('required');
-        if (questionCount === 0) addQuestion();
-      } else {
-        pdfArea.classList.remove('d-none');
-        mcqArea.classList.add('d-none');
+  document.querySelectorAll('.share-rec-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const token = btn.dataset.token;
+      const filename = btn.dataset.filename;
+      const formData = new FormData();
+      formData.append('token', token);
+      formData.append('filename', filename);
+      try {
+        const res = await fetch('/toggle-recording-share', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          if (data.shared) {
+            btn.textContent = 'Shared ✓';
+            btn.classList.remove('btn-secondary-custom');
+            btn.classList.add('btn-success-custom');
+          } else {
+            btn.textContent = 'Share';
+            btn.classList.remove('btn-success-custom');
+            btn.classList.add('btn-secondary-custom');
+          }
+        } else {
+          alert(data.message || 'Could not update sharing status.');
+        }
+      } catch (err) {
+        alert('Network error updating sharing status.');
       }
+    });
+  });
+
+  const typePdfRadio = document.getElementById('type-pdf');
+  const typeMcqRadio = document.getElementById('type-mcq');
+  const pdfArea = document.getElementById('pdf-upload-area');
+  const mcqArea = document.getElementById('mcq-builder-area');
+  const mcqList = document.getElementById('mcq-questions-list');
+  const addQuestionBtn = document.getElementById('add-question-btn');
+
+  let questionIndex = 0;
+
+  typePdfRadio.addEventListener('change', () => {
+    pdfArea.classList.remove('d-none');
+    mcqArea.classList.add('d-none');
+    document.querySelector('[name="exam_pdf"]').setAttribute('required', '');
+  });
+
+  typeMcqRadio.addEventListener('change', () => {
+    pdfArea.classList.add('d-none');
+    mcqArea.classList.remove('d-none');
+    document.querySelector('[name="exam_pdf"]').removeAttribute('required');
+    if (mcqList.children.length === 0) {
+      addQuestionCard();
     }
-    typePdfRadio.addEventListener('change', toggleExamType);
-    typeMcqRadio.addEventListener('change', toggleExamType);
+  });
 
-    function addQuestion() {
-      const idx = questionCount++;
-      const block = document.createElement('div');
-      block.className = 'border border-secondary rounded p-3 mb-2 bg-dark bg-opacity-30';
-      block.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="text-info small fw-bold">Question ${idx + 1}</span>
-          <button type="button" class="btn btn-sm btn-outline-danger remove-q-btn">Remove</button>
-        </div>
-        <input type="text" name="question_text[]" class="form-control bg-dark text-white border-secondary mb-2" placeholder="Question text" required>
-        <div class="row g-2">
-          ${[0,1,2,3].map(o => `
-            <div class="col-md-6 d-flex align-items-center gap-2">
-              <input type="radio" name="correct_index_radio_${idx}" class="form-check-input mark-correct" data-idx="${idx}" data-opt="${o}">
-              <input type="text" name="option_${o}[]" class="form-control bg-dark text-white border-secondary" placeholder="Option ${o + 1}" required>
-            </div>
-          `).join('')}
-        </div>
-        <input type="hidden" name="correct_index[]" class="correct-index-hidden" value="0">
-        <small class="text-white-50">Select the radio button next to the correct option.</small>
-      `;
-      mcqList.appendChild(block);
+  addQuestionBtn.addEventListener('click', addQuestionCard);
 
-      block.querySelector('.remove-q-btn').addEventListener('click', () => block.remove());
-      block.querySelectorAll('.mark-correct').forEach(radio => {
-        radio.addEventListener('change', () => {
-          block.querySelector('.correct-index-hidden').value = radio.dataset.opt;
-        });
-      });
+  function addQuestionCard() {
+    const card = document.createElement('div');
+    card.className = 'card bg-dark bg-opacity-30 border border-secondary border-opacity-10 p-3 rounded';
+    card.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-white-50 font-mono small">Question #${questionIndex + 1}</span>
+        <button type="button" class="btn btn-sm btn-danger-custom py-0 px-2" onclick="this.closest('.card').remove();">Remove</button>
+      </div>
+      <div class="mb-3">
+        <input type="text" name="question_text[]" class="form-control-custom form-control-sm" placeholder="Question prompt..." required>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <input type="text" name="option_0[]" class="form-control-custom form-control-sm" placeholder="Option A" required>
+        </div>
+        <div class="col-md-6">
+          <input type="text" name="option_1[]" class="form-control-custom form-control-sm" placeholder="Option B" required>
+        </div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <input type="text" name="option_2[]" class="form-control-custom form-control-sm" placeholder="Option C" required>
+        </div>
+        <div class="col-md-6">
+          <input type="text" name="option_3[]" class="form-control-custom form-control-sm" placeholder="Option D" required>
+        </div>
+      </div>
+      <div>
+        <label class="form-label text-muted small me-2">Correct Option index:</label>
+        <select name="correct_index[]" class="form-control-custom form-control-sm d-inline-block w-auto" style="padding-top: 6px; padding-bottom: 6px;">
+          <option value="0">A</option>
+          <option value="1">B</option>
+          <option value="2">C</option>
+          <option value="3">D</option>
+        </select>
+      </div>
+    `;
+    mcqList.appendChild(card);
+    questionIndex++;
+  }
+
+  // Updated Calendar Engine script to pull dates from all forms of activities
+  document.addEventListener("DOMContentLoaded", function() {
+    const monthYearLabel = document.getElementById("calendar-month-year");
+    const daysGrid = document.getElementById("calendar-days-grid");
+    
+    const deadlineDates = [];
+    
+    // 1. Gather dates from deployed exams
+    document.querySelectorAll(".exam-data-row").forEach(row => {
+      const rawDate = row.getAttribute("data-date");
+      if(rawDate) {
+        const cleanlySplit = rawDate.split("T")[0];
+        if(cleanlySplit && !deadlineDates.includes(cleanlySplit)) deadlineDates.push(cleanlySplit);
+      }
+    });
+
+    // 2. Gather dates from newly posted assignments, deadlines, and announcements cards
+    document.querySelectorAll(".activity-data-row").forEach(row => {
+      const rawDate = row.getAttribute("data-date");
+      if(rawDate) {
+        const cleanlySplit = rawDate.split("T")[0];
+        if(cleanlySplit && !deadlineDates.includes(cleanlySplit)) deadlineDates.push(cleanlySplit);
+      }
+    });
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    monthYearLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+    const adjustedFirstDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+    const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    daysGrid.innerHTML = "";
+
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      const emptyCell = document.createElement("div");
+      emptyCell.className = "calendar-cell empty";
+      daysGrid.appendChild(emptyCell);
     }
-    addQuestionBtn.addEventListener('click', addQuestion);
-  </script>
 
-</body>
-</html>
+    for (let day = 1; day <= totalDaysInMonth; day++) {
+      const cell = document.createElement("div");
+      cell.className = "calendar-cell";
+      cell.textContent = day;
+
+      const matchMonth = String(currentMonth + 1).padStart(2, '0');
+      const matchDay = String(day).padStart(2, '0');
+      const constructedIsoDateStr = `${currentYear}-${matchMonth}-${matchDay}`;
+
+      if (day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
+        cell.classList.add("today");
+      }
+
+      if (deadlineDates.includes(constructedIsoDateStr)) {
+        cell.classList.add("has-deadline");
+        cell.title = "Active Environment Deadline / Task Event Frame";
+      }
+
+      daysGrid.appendChild(cell);
+    }
+  });
+</script>
+{% endblock %}
