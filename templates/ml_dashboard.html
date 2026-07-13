@@ -1,0 +1,317 @@
+<!-- Dashboard component to display ML analysis results -->
+<!-- Save as: templates/ml_dashboard.html -->
+
+{% extends "base.html" %}
+
+{% block title %}Exam Analysis Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">📊 ML Analysis Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- Overall Submission Report -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">📋 Submission Report</h5>
+                </div>
+                <div class="card-body">
+                    <div id="reportLoading" class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <div id="reportContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">⚡ Quick Stats</h5>
+                </div>
+                <div class="card-body" id="statsContent">
+                    <p class="text-muted">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cheating Analysis Card -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">🚨 Cheating Analysis</h5>
+                </div>
+                <div class="card-body" id="cheatingContent">
+                    <p class="text-muted">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Gauge -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">📈 Risk Level Gauge</h5>
+                </div>
+                <div class="card-body text-center" id="gaugeContent">
+                    <canvas id="riskGauge" width="200" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Answer Grading Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">📝 Answer Analysis & Grading</h5>
+                </div>
+                <div class="card-body">
+                    <div id="answerAnalysisLoading" class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <div id="answerAnalysisContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Proctoring Violations Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">🔍 Proctoring Violations</h5>
+                </div>
+                <div class="card-body">
+                    <div id="violationsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Randomization Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">🎲 Exam Randomization</h5>
+                </div>
+                <div class="card-body">
+                    <div id="randomizationContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .risk-low { color: #28a745; font-weight: bold; }
+    .risk-medium { color: #ffc107; font-weight: bold; }
+    .risk-high { color: #fd7e14; font-weight: bold; }
+    .risk-critical { color: #dc3545; font-weight: bold; }
+
+    .stat-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+    }
+
+    .stat-label {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+
+    .flag-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        border-left: 4px solid;
+        border-radius: 4px;
+    }
+
+    .flag-critical { border-left-color: #dc3545; background-color: #f8d7da; }
+    .flag-high { border-left-color: #fd7e14; background-color: #fff3cd; }
+    .flag-medium { border-left-color: #ffc107; background-color: #e7f3ff; }
+    .flag-low { border-left-color: #28a745; background-color: #d4edda; }
+</style>
+
+<script>
+    const submissionId = new URLSearchParams(window.location.search).get('submission_id');
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        if (!submissionId) {
+            alert('Submission ID required');
+            return;
+        }
+
+        try {
+            // Fetch comprehensive report
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/ml/submission-report/${submissionId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('Failed to load report');
+
+            const report = await response.json();
+            displayReport(report);
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('reportContent').innerHTML = `<div class="alert alert-danger">Error loading report: ${error.message}</div>`;
+        }
+    });
+
+    function displayReport(report) {
+        // Display quick stats
+        const stats = report.summary;
+        document.getElementById('statsContent').innerHTML = `
+            <div class="stat-box">
+                <div class="stat-number">${stats.cheating_score.toFixed(1)}</div>
+                <div class="stat-label">Cheating Score</div>
+            </div>
+            <p><strong>Risk Level:</strong> <span class="risk-${stats.cheating_risk.toLowerCase()}">${stats.cheating_risk}</span></p>
+            <p><strong>Exam Score:</strong> ${report.score}/${report.max_score} (${((report.score/report.max_score)*100).toFixed(1)}%)</p>
+            <p><strong>Status:</strong> ${report.status}</p>
+            <p><strong>Flagged:</strong> ${stats.overall_flagged ? '⚠️ Yes' : '✅ No'}</p>
+        `;
+
+        // Display cheating analysis
+        if (report.cheating_analysis) {
+            const analysis = report.cheating_analysis;
+            document.getElementById('cheatingContent').innerHTML = `
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Score:</strong> <span class="risk-${analysis.risk_level}">${analysis.cheating_score.toFixed(1)}/100</span></p>
+                        <p><strong>Risk:</strong> <span class="risk-${analysis.risk_level}">${analysis.risk_level.toUpperCase()}</span></p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Total Violations:</strong> ${analysis.violation_counts.total}</p>
+                        <p><strong>Face Violations:</strong> ${analysis.violation_counts.face_violations}</p>
+                    </div>
+                </div>
+
+                <h6 class="mt-3">Score Breakdown:</h6>
+                <ul>
+                    <li>Severity: ${analysis.breakdown.severity_score}</li>
+                    <li>Burst: ${analysis.breakdown.burst_score}</li>
+                    <li>Escalation: ${analysis.breakdown.escalation_score}</li>
+                    <li>Diversity: ${analysis.breakdown.diversity_score}</li>
+                    <li>Timing: ${analysis.breakdown.timing_score}</li>
+                    <li>Edge Case Bonus: ${analysis.breakdown.edge_case_bonus}</li>
+                </ul>
+
+                ${analysis.flags.length > 0 ? `
+                    <h6 class="mt-3">Detected Issues:</h6>
+                    ${analysis.flags.map(f => `
+                        <div class="flag-item flag-${f.severity}">
+                            <strong>${f.reason}</strong><br>
+                            <small>${f.description}</small>
+                        </div>
+                    `).join('')}
+                ` : '<p class="text-success mt-3">✅ No issues detected</p>'}
+            `;
+
+            // Draw risk gauge
+            drawRiskGauge(analysis.cheating_score);
+        }
+
+        // Display answer analyses
+        if (report.answer_analyses.length > 0) {
+            const answerHTML = `
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Question ID</th>
+                            <th>Score</th>
+                            <th>Keywords Found</th>
+                            <th>Semantic Similarity</th>
+                            <th>Feedback</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${report.answer_analyses.map(a => `
+                            <tr>
+                                <td><code>${a.question_id.substring(0, 8)}...</code></td>
+                                <td><strong>${a.score.toFixed(1)}/${a.max_marks}</strong></td>
+                                <td>${a.keywords_found.filter(k => k.present).length}/${a.keywords_found.length}</td>
+                                <td>${a.semantic_similarity.toFixed(1)}%</td>
+                                <td><small>${a.feedback.substring(0, 50)}...</small></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('answerAnalysisContent').innerHTML = answerHTML;
+        }
+        document.getElementById('answerAnalysisLoading').style.display = 'none';
+
+        // Display randomization info
+        if (report.randomization) {
+            const rand = report.randomization;
+            document.getElementById('randomizationContent').innerHTML = `
+                <p><strong>Exam Token:</strong> <code>${rand.exam_token}</code></p>
+                <p><strong>Questions Selected:</strong> ${rand.total_questions}</p>
+                <p><strong>Selection Method:</strong> ${rand.selection_method}</p>
+                <p><strong>Categories:</strong> ${rand.categories_covered.join(', ')}</p>
+            `;
+        }
+
+        document.getElementById('reportLoading').style.display = 'none';
+    }
+
+    function drawRiskGauge(score) {
+        const canvas = document.getElementById('riskGauge');
+        const ctx = canvas.getContext('2d');
+
+        // Determine color based on score
+        let color;
+        if (score < 30) color = '#28a745'; // Green
+        else if (score < 50) color = '#ffc107'; // Yellow
+        else if (score < 70) color = '#fd7e14'; // Orange
+        else color = '#dc3545'; // Red
+
+        // Draw circle
+        ctx.beginPath();
+        ctx.arc(100, 100, 80, 0, 2 * Math.PI);
+        ctx.fillStyle = '#e9ecef';
+        ctx.fill();
+
+        // Draw filled portion
+        const angle = (score / 100) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.arc(100, 100, 80, -Math.PI / 2, -Math.PI / 2 + angle);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 15;
+        ctx.stroke();
+
+        // Draw score text
+        ctx.font = 'bold 40px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = color;
+        ctx.fillText(score.toFixed(1), 100, 100);
+
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Cheating Score', 100, 140);
+    }
+</script>
+{% endblock %}

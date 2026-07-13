@@ -29,6 +29,12 @@
       "password": "scrypt:32768:8:1$5YAuxX7fd45hjNop$3b6140fca7a4ecab479d7cb62693f4dbc6f06650f6b01da00af690533145dd266ebb63f15b02003014c3356c9be75edad616910f9888e382ae5758353e810db8",
       "role": "student",
       "otp": null
+    },
+    "j@gmail.com": {
+      "full_name": "jk",
+      "password": "scrypt:32768:8:1$PSTezU8zOr1jzS98$af78a0f0d76d2b269d6e12b017abe7d558cf6816daceed7e7fc3fd2b4e893629f357da9ea28f584f7692aca70c0ef9eb760ca11458a68494a496fcbf5c64d929",
+      "role": "admin",
+      "otp": null
     }
   },
   "classrooms": [
@@ -45,6 +51,16 @@
       "name": "python",
       "token": "5G6MLT",
       "owner_email": "ishh@gmail.com"
+    },
+    {
+      "name": "cyber security",
+      "token": "H8IVD1",
+      "owner_email": "j@gmail.com"
+    },
+    {
+      "name": "dsa",
+      "token": "KI6VAI",
+      "owner_email": "K@gmail.com"
     }
   ],
   "enrollments": {
@@ -86,6 +102,18 @@
       {
         "timestamp": "2026-07-08 22:32:11",
         "log": "Classroom created by ishh@gmail.com"
+      }
+    ],
+    "H8IVD1": [
+      {
+        "timestamp": "2026-07-13 20:10:08",
+        "log": "Classroom created by j@gmail.com"
+      }
+    ],
+    "KI6VAI": [
+      {
+        "timestamp": "2026-07-13 20:14:33",
+        "log": "Classroom created by K@gmail.com"
       }
     ]
   },
@@ -199,6 +227,14 @@
         "timestamp": "2026-07-08 23:11:50",
         "ip": "127.0.0.1",
         "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      }
+    ],
+    "j@gmail.com": [
+      {
+        "event": "signup+login",
+        "timestamp": "2026-07-13 20:09:59",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
       }
     ]
   },

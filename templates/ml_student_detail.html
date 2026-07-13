@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Student Analysis - {{ student_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>👤 Student Analysis</h2>
+                    <h5 class="text-muted">{{ student_name }} ({{ student_email }})</h5>
+                </div>
+                <a href="/ml-dashboard/exam/{{ exam.id }}" class="btn btn-secondary">
+                    ← Back to Exam
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if analysis %}
+    <!-- Main Cheating Score Card -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="text-white mb-0">🚨 Cheating Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 text-center mb-3">
+                            <div class="display-4 font-weight-bold">
+                                <span class="{% if analysis.cheating_score >= 80 %}text-danger{% elif analysis.cheating_score >= 60 %}text-warning{% elif analysis.cheating_score >= 30 %}text-info{% else %}text-success{% endif %}">
+                                    {{ analysis.cheating_score|round(1) }}
+                                </span>
+                            </div>
+                            <small class="text-muted">out of 100</small>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Risk Level:</strong><br>
+                                <span class="badge bg-{% if analysis.risk_level == 'critical' %}danger{% elif analysis.risk_level == 'high' %}warning{% elif analysis.risk_level == 'medium' %}info{% else %}success{% endif %} p-2">
+                                    {{ analysis.risk_level|upper }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exam Score -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">📝 Exam Performance</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Score:</strong> <span class="badge bg-primary">{{ submission.marks_obtained|default('N/A') }} / {{ submission.total_marks|default('N/A') }}</span>
+                    </p>
+                    <p class="mb-2">
+                        <strong>Status:</strong> 
+                        {% if submission.status == 'submitted' %}
+                            <span class="badge bg-success">✓ Submitted</span>
+                        {% elif submission.status == 'in_progress' %}
+                            <span class="badge bg-warning">⏳ In Progress</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Not Submitted</span>
+                        {% endif %}
+                    </p>
+                    <p class="mb-0">
+                        <strong>Time:</strong> {{ submission.submitted_at|default('Not submitted') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Breakdown -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">📊 Score Breakdown</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <p class="text-muted small">Severity Score</p>
+                            <div class="progress">
+                                <div class="progress-bar bg-danger" style="width: {{ (analysis.breakdown.severity_score / 40 * 100)|int }}%"></div>
+                            </div>
+                            <p class="small mt-1">{{ analysis.breakdown.severity_score|round(1) }}/40</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <p class="text-muted small">Burst Score</p>
+                            <div class="progress">
+                                <div class="progress-bar bg-warning" style="width: {{ (analysis.breakdown.burst_score / 20 * 100)|int }}%"></div>
+                            </div>
+                            <p class="small mt-1">{{ analysis.breakdown.burst_score|round(1) }}/20</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <p class="text-muted small">Escalation Score</p>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" style="width: {{ (analysis.breakdown.escalation_score / 15 * 100)|int }}%"></div>
+                            </div>
+                            <p class="small mt-1">{{ analysis.breakdown.escalation_score|round(1) }}/15</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <p class="text-muted small">Diversity Score</p>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" style="width: {{ (analysis.breakdown.diversity_score / 10 * 100)|int }}%"></div>
+                            </div>
+                            <p class="small mt-1">{{ analysis.breakdown.diversity_score|round(1) }}/10</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <p class="text-muted small">Timing Score</p>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" style="width: {{ (analysis.breakdown.timing_score / 15 * 100)|int }}%"></div>
+                            </div>
+                            <p class="small mt-1">{{ analysis.breakdown.timing_score|round(1) }}/15</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <p class="text-muted small">Edge Case Bonus</p>
+                            <div class="progress">
+                                <div class="progress-bar bg-secondary" style="width: {{ (analysis.breakdown.edge_case_bonus / 20 * 100)|int }}%"></div>
+                            </div>
+                            <p class="small mt-1">{{ analysis.breakdown.edge_case_bonus|round(1) }}/20</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detected Flags -->
+    {% if analysis.flags %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">🚩 Detected Violations ({{ analysis.flags|length }})</h6>
+                </div>
+                <div class="card-body">
+                    {% for flag in analysis.flags %}
+                    <div class="alert alert-{% if flag.severity == 'critical' %}danger{% elif flag.severity == 'high' %}warning{% elif flag.severity == 'medium' %}info{% else %}success{% endif %} mb-2">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">{{ flag.reason }}</h6>
+                                <p class="small mb-0">{{ flag.description }}</p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <span class="badge bg-{% if flag.severity == 'critical' %}danger{% elif flag.severity == 'high' %}warning{% elif flag.severity == 'medium' %}info{% else %}success{% endif %}">
+                                    {{ flag.severity|upper }}
+                                </span>
+                                <br>
+                                <small class="text-muted">Weight: {{ (flag.weight * 100)|int }}%</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Browser Events Timeline -->
+    {% if browser_events %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">📱 Browser Events Timeline ({{ browser_events|length }})</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for event in browser_events|sort(attribute='timestamp', reverse=True) %}
+                        <div class="timeline-item mb-3">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <small class="text-muted">{{ event.timestamp }}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="badge bg-secondary">{{ event.type }}</span>
+                                </div>
+                                <div class="col-md-7">
+                                    <p class="small mb-0">{{ event.detail }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Exam Info -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">📋 Exam Information</h6>
+                </div>
+                <div class="card-body small">
+                    <p><strong>Title:</strong> {{ exam.title }}</p>
+                    <p><strong>Type:</strong> {{ exam.type|upper }}</p>
+                    <p><strong>Duration:</strong> {{ exam.duration_minutes }} minutes</p>
+                    <p><strong>Date:</strong> {{ exam.start_time }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">💡 Risk Interpretation</h6>
+                </div>
+                <div class="card-body small">
+                    <p class="mb-1">
+                        <strong class="text-success">LOW (0-30):</strong> Normal exam behavior<br>
+                        <strong class="text-info">MEDIUM (30-60):</strong> Minor violations, review recommended<br>
+                        <strong class="text-warning">HIGH (60-80):</strong> Significant violations, manual review<br>
+                        <strong class="text-danger">CRITICAL (80+):</strong> Severe violations, investigation needed
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- No Analysis Available -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h6 class="alert-heading">ℹ️ No Analysis Available</h6>
+                <p class="mb-0">The student has not completed the exam yet or no browser events were recorded.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    .bg-gradient {
+        background-size: 200% 200%;
+    }
+    
+    .timeline-item {
+        padding-left: 20px;
+        border-left: 2px solid #dee2e6;
+    }
+    
+    .timeline-item:last-child {
+        border-left: 2px solid transparent;
+    }
+    
+    .badge {
+        font-size: 0.85em;
+        padding: 0.5em 0.75em;
+    }
+</style>
+{% endblock %}

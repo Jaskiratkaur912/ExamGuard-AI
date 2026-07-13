@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}ML Analysis Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-2">📊 ML Analysis Dashboard</h1>
+            <p class="text-muted">Comprehensive cheating detection and analysis across all exams</p>
+        </div>
+    </div>
+
+    {% if not ml_enabled %}
+    <div class="alert alert-warning" role="alert">
+        <strong>⚠️ ML Models Not Available</strong>
+        <p>The ML models (cheating_score.py and exam_intelligence.py) are not installed. 
+           Please ensure they are in the workspace root directory.</p>
+    </div>
+    {% endif %}
+
+    <!-- Classrooms Overview -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">📚 Your Classrooms</h5>
+                </div>
+                <div class="card-body">
+                    {% if classrooms %}
+                    <div class="row">
+                        {% for classroom in classrooms %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ classroom.name }}</h6>
+                                    <p class="card-text text-muted small">Token: <code>{{ classroom.token }}</code></p>
+                                    <a href="/classroom/{{ classroom.token }}/exams" class="btn btn-sm btn-primary">
+                                        View Exams
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No classrooms found. Create one to get started.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to Use -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">🚀 How to Use</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li><strong>Create an Exam</strong> - Go to your classroom and create an exam</li>
+                        <li><strong>Students Take Exam</strong> - Proctoring logs browser events automatically</li>
+                        <li><strong>View Analysis</strong> - Click "ML Analysis" link next to exam to see cheating scores</li>
+                        <li><strong>Review Flagged Students</strong> - Students with score ≥70 are highlighted</li>
+                        <li><strong>Take Action</strong> - Review suspicious submissions and take appropriate action</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="row mb-5">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">🚨 Cheating Detection</h5>
+                    <p class="card-text">Analyzes 14+ violation types including:</p>
+                    <ul class="small">
+                        <li>Tab switching</li>
+                        <li>Fullscreen exit</li>
+                        <li>Multiple faces</li>
+                        <li>Face mismatch</li>
+                        <li>Copy/Paste attempts</li>
+                        <li>Dev tools opened</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">📈 Risk Scoring</h5>
+                    <p class="card-text">Generates 0-100 risk score with levels:</p>
+                    <ul class="small">
+                        <li><span class="badge bg-success">LOW</span> (0-30)</li>
+                        <li><span class="badge bg-info">MEDIUM</span> (30-60)</li>
+                        <li><span class="badge bg-warning">HIGH</span> (60-80)</li>
+                        <li><span class="badge bg-danger">CRITICAL</span> (80+)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">📝 Getting Started</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Next Steps:</strong></p>
+                    <ul>
+                        <li>Go to one of your classrooms above</li>
+                        <li>Create or select an exam</li>
+                        <li>After students submit, check the ML analysis</li>
+                        <li>View detailed cheating scores and violation breakdown</li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <p class="small text-muted">
+                        <strong>Note:</strong> ML Analysis is automatically collected during exams. 
+                        The dashboard shows analysis for all submitted exams.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .badge {
+        font-size: 0.85em;
+        padding: 0.5em 0.75em;
+    }
+</style>
+{% endblock %}

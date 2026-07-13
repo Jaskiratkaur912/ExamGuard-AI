@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Analysis - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>📊 Exam Analysis</h2>
+                    <h4 class="text-muted">{{ exam.title }}</h4>
+                </div>
+                <a href="/classroom/{{ classroom.token }}" class="btn btn-secondary">
+                    ← Back to Classroom
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Students</h6>
+                    <h3 class="mb-0">{{ analyses|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning bg-opacity-25">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">High Risk (≥60)</h6>
+                    <h3 class="mb-0 text-warning">
+                        {{ analyses|selectattr('risk_level', 'in', ['high', 'critical'])|list|length }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger bg-opacity-25">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Critical (≥80)</h6>
+                    <h3 class="mb-0 text-danger">
+                        {{ analyses|selectattr('risk_level', 'equalto', 'critical')|list|length }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info bg-opacity-25">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Avg Score</h6>
+                    <h3 class="mb-0 text-info">
+                        {% if analyses %}
+                            {{ (analyses|map(attribute='cheating_score')|list|sum / analyses|length)|round(1) }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">👥 Student Analysis Results</h5>
+                </div>
+                <div class="card-body">
+                    {% if analyses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Cheating Score</th>
+                                    <th>Risk Level</th>
+                                    <th>Exam Score</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for analysis in analyses|sort(attribute='cheating_score', reverse=True) %}
+                                <tr class="{% if analysis.cheating_score >= 80 %}table-danger{% elif analysis.cheating_score >= 60 %}table-warning{% endif %}">
+                                    <td>
+                                        <strong>{{ analysis.student_name }}</strong><br>
+                                        <small class="text-muted">{{ analysis.student_email }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="text-center">
+                                            <span class="badge bg-{% if analysis.cheating_score >= 80 %}danger{% elif analysis.cheating_score >= 60 %}warning{% elif analysis.cheating_score >= 30 %}info{% else %}success{% endif %} p-2">
+                                                {{ analysis.cheating_score|round(1) }}/100
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if analysis.risk_level == 'critical' %}danger{% elif analysis.risk_level == 'high' %}warning{% elif analysis.risk_level == 'medium' %}info{% else %}success{% endif %}">
+                                            {{ analysis.risk_level|upper }}
+                                        </span>
+                                    </td>
+                                    <td>{{ analysis.exam_score }}</td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {% if analysis.submission_status == 'submitted' %}
+                                                ✓ Submitted
+                                            {% elif analysis.submission_status == 'in_progress' %}
+                                                ⏳ In Progress
+                                            {% else %}
+                                                Not Submitted
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <a href="/ml-dashboard/student/{{ analysis.student_email }}/{{ exam.id }}" 
+                                           class="btn btn-sm btn-primary">
+                                            Detailed Analysis
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No student data available yet. Students need to complete exams first.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exam Details -->
+    <div class="row mt-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">📋 Exam Details</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Title:</strong> {{ exam.title }}</p>
+                    <p><strong>Type:</strong> {{ exam.type|upper }}</p>
+                    <p><strong>Duration:</strong> {{ exam.duration_minutes }} minutes</p>
+                    <p><strong>Date & Time:</strong> {{ exam.start_time }}</p>
+                    <p><strong>Exam ID:</strong> <code>{{ exam.id }}</code></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">🔍 Risk Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h4 class="text-success">
+                                {{ analyses|selectattr('risk_level', 'equalto', 'low')|list|length }}
+                            </h4>
+                            <small>Low Risk</small>
+                        </div>
+                        <div class="col">
+                            <h4 class="text-info">
+                                {{ analyses|selectattr('risk_level', 'equalto', 'medium')|list|length }}
+                            </h4>
+                            <small>Medium Risk</small>
+                        </div>
+                        <div class="col">
+                            <h4 class="text-warning">
+                                {{ analyses|selectattr('risk_level', 'equalto', 'high')|list|length }}
+                            </h4>
+                            <small>High Risk</small>
+                        </div>
+                        <div class="col">
+                            <h4 class="text-danger">
+                                {{ analyses|selectattr('risk_level', 'equalto', 'critical')|list|length }}
+                            </h4>
+                            <small>Critical</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    .badge {
+        font-size: 0.9em;
+        padding: 0.5em 0.75em;
+    }
+</style>
+{% endblock %}
