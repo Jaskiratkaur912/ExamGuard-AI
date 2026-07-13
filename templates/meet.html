@@ -1,291 +1,434 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Live Meet | {{ classroom.name }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background-color: #0f172a; color: #fff; height: 100vh; overflow: hidden; }
-    .glass-panel {
-      background: linear-gradient(135deg, rgba(15, 32, 67, 0.6), rgba(30, 64, 175, 0.35));
-      backdrop-filter: blur(12px); border: 1px solid rgba(96, 165, 250, 0.2);
-    }
-    #video-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-      padding: 16px;
-      height: calc(100vh - 140px);
-      overflow-y: auto;
-      align-content: start;
-    }
-    .video-tile {
-      position: relative;
-      background: #000;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid rgba(96, 165, 250, 0.25);
-      aspect-ratio: 16/9;
-    }
-    .video-tile video { width: 100%; height: 100%; object-fit: cover; }
-    .video-tile .tile-label {
-      position: absolute; bottom: 8px; left: 10px;
-      font-size: 0.75rem; background: rgba(0,0,0,0.55);
-      padding: 2px 10px; border-radius: 20px;
-    }
-    .rec-indicator {
-      display: none; align-items: center; gap: 6px;
-      background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.4);
-      padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: #f87171;
-    }
-    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: pulse 1.2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-    .control-btn {
-      width: 52px; height: 52px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; border: none; cursor: pointer;
-    }
-  </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-  <nav class="navbar glass-panel px-4 d-flex justify-content-between">
-    <div class="d-flex align-items-center gap-3">
-      <span class="navbar-brand fw-bold text-success fs-5 m-0">🔴 Live Meet — {{ classroom.name }}</span>
-      <span class="badge bg-info text-dark">{{ classroom.token }}</span>
-      <span id="rec-indicator" class="rec-indicator"><span class="rec-dot"></span> Recording</span>
-    </div>
-    <div class="d-flex align-items-center gap-3">
-      <span class="text-white-50 small" id="participant-count">1 in room</span>
-      <a href="{{ back_url }}" class="btn btn-outline-light btn-sm">Leave</a>
-    </div>
-  </nav>
+{% block title %}Live Stream Terminal | ExamGuard-AI{% endblock %}
 
-  <div id="video-grid"></div>
+{% block head %}
+<style>
+  html, body {
+    height: 100vh;
+    overflow: hidden;
+  }
+  #video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    padding: 24px;
+    height: calc(100vh - 160px);
+    overflow-y: auto;
+    align-content: start;
+  }
+  .video-tile {
+    position: relative;
+    background: #020617;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-primary);
+    aspect-ratio: 16/9;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .video-tile:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  .video-tile video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .video-tile .tile-label {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    font-size: 0.75rem;
+    background: rgba(9, 13, 22, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-primary);
+    font-weight: 600;
+    font-family: var(--font-mono);
+  }
+  .rec-indicator {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--accent-red);
+  }
+  .rec-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-red);
+    animation: pulse-recording 1.2s infinite;
+  }
+  @keyframes pulse-recording {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .control-btn-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    border: 1px solid var(--border-primary);
+    cursor: pointer;
+    background-color: var(--bg-tertiary);
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+  .control-btn-circle:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: var(--text-muted);
+    transform: scale(1.05);
+  }
+  .control-btn-circle.sharing {
+    background-color: rgba(6, 182, 212, 0.2);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    box-shadow: var(--shadow-glow-cyan);
+  }
+  .control-btn-circle.btn-red-alert {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+  }
+  .control-btn-circle.btn-red-alert:hover {
+    background-color: rgba(239, 68, 68, 0.3);
+    border-color: var(--accent-red);
+    box-shadow: var(--shadow-glow-red);
+  }
+</style>
+{% endblock %}
 
-  <div class="d-flex justify-content-center align-items-center gap-3 py-3 glass-panel">
-    <button id="toggle-mic" class="control-btn btn-outline-light bg-dark text-white" title="Mute/Unmute">🎤</button>
-    <button id="toggle-cam" class="control-btn btn-outline-light bg-dark text-white" title="Camera on/off">📷</button>
-    {% if is_admin %}
-    <button id="toggle-record" class="control-btn btn-danger" title="Start/Stop Recording">⏺</button>
-    {% endif %}
-    <a href="{{ back_url }}" class="control-btn btn-danger" title="Leave call" style="text-decoration:none;">☎</a>
+{% block content %}
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-custom px-4 py-3 d-flex justify-content-between">
+  <div class="d-flex align-items-center gap-3">
+    <span class="navbar-brand fw-bold fs-5 m-0 text-white font-mono">
+      <i class="bi bi-broadcast text-danger"></i> Live Stream Terminal
+    </span>
+    <span class="badge-custom badge-cyan font-mono">{{ classroom.token }}</span>
+    <span class="badge-custom badge-blue font-mono"><i class="bi bi-shield-lock"></i> E2EE CHANNEL</span>
+    <span id="rec-indicator" class="rec-indicator"><span class="rec-dot"></span> Archiving Feed</span>
   </div>
-
-  <div id="meet-metadata"
-       data-room-token="{{ classroom.token }}"
-       data-self-name="{{ self_name }}"
-       data-is-admin="{{ 'true' if is_admin else 'false' }}">
+  <div class="d-flex align-items-center gap-3">
+    <span class="badge-custom badge-green font-mono d-none d-md-flex align-items-center gap-2" style="font-size: 0.75rem;">
+      <span class="pulse-dot"></span> DTLS/SRTP Keys Active
+    </span>
+    <span class="text-muted small font-mono" id="participant-count">1 Node Connected</span>
+    <a href="{{ back_url }}" class="btn btn-danger-custom py-2 px-3 btn-sm">
+      Disconnect
+    </a>
   </div>
+</nav>
 
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script>
-    // Extract properties cleanly via DOM element data properties
-    const metaEl = document.getElementById('meet-metadata');
-    const ROOM_TOKEN = metaEl.dataset.roomToken;
-    const SELF_NAME  = metaEl.dataset.selfName;
-    const IS_ADMIN   = metaEl.dataset.isAdmin === 'true';
+<!-- Video stream container grid -->
+<div id="video-grid" class="custom-scroll"></div>
 
-    const socket = io();
-    const videoGrid = document.getElementById('video-grid');
-    const participantCountEl = document.getElementById('participant-count');
+<!-- Meeting Controls Bar -->
+<div class="d-flex justify-content-center align-items-center gap-3 py-3 glass-panel fixed-bottom border-top" style="border-radius: 0; border-color: var(--border-primary) !important;">
+  <button id="toggle-mic" class="control-btn-circle" title="Mute/Unmute">🎤</button>
+  <button id="toggle-cam" class="control-btn-circle" title="Camera on/off">📷</button>
+  <button id="toggle-screen" class="control-btn-circle" title="Share Screen">🖥️</button>
+  {% if is_admin %}
+  <button id="toggle-record" class="control-btn-circle btn-red-alert" title="Start/Stop Recording">⏺</button>
+  {% endif %}
+  <a href="{{ back_url }}" class="control-btn-circle btn-red-alert" title="Leave call" style="text-decoration:none;">
+    <i class="bi bi-telephone-x-fill" style="font-size: 1.15rem; line-height: 1.5;"></i>
+  </a>
+</div>
 
-    let localStream = null;
-    const peers = {};        // socketId -> RTCPeerConnection
-    const remoteVideos = {}; // socketId -> <video> element
+<!-- Metadata properties payload -->
+<div id="meet-metadata"
+     data-room-token="{{ classroom.token }}"
+     data-self-name="{{ self_name }}"
+     data-is-admin="{{ 'true' if is_admin else 'false' }}">
+</div>
+{% endblock %}
 
-    const STUN_CONFIG = {
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const metaEl = document.getElementById('meet-metadata');
+  const ROOM_TOKEN = metaEl.dataset.roomToken;
+  const SELF_NAME  = metaEl.dataset.selfName;
+  const IS_ADMIN   = metaEl.dataset.isAdmin === 'true';
+
+  const socket = io();
+  const videoGrid = document.getElementById('video-grid');
+  const participantCountEl = document.getElementById('participant-count');
+
+  let localStream = null;
+  let screenStream = null;
+  let isScreenSharing = false;
+  
+  const peers = {};        
+  const remoteVideos = {}; 
+
+  const STUN_CONFIG = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  };
+
+  function addVideoTile(id, stream, label, isLocal=false) {
+    const tile = document.createElement('div');
+    tile.className = 'video-tile';
+    tile.id = `tile-${id}`;
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.playsInline = true;
+    if (isLocal) video.muted = true;
+    video.srcObject = stream;
+    const tag = document.createElement('span');
+    tag.className = 'tile-label';
+    tag.textContent = label;
+    tile.appendChild(video);
+    tile.appendChild(tag);
+    videoGrid.appendChild(tile);
+    return video;
+  }
+
+  function removeVideoTile(id) {
+    const tile = document.getElementById(`tile-${id}`);
+    if (tile) tile.remove();
+  }
+
+  function updateCount() {
+    const n = Object.keys(peers).length + 1;
+    participantCountEl.textContent = `${n} Node${n !== 1 ? 's' : ''} Connected`;
+  }
+
+  async function init() {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    } catch (err) {
+      alert('Camera/microphone access is required to join the meet. Please allow permissions and reload.');
+      return;
+    }
+    addVideoTile('local', localStream, `${SELF_NAME} (You)`, true);
+    socket.emit('join-room', { room: ROOM_TOKEN, name: SELF_NAME, isAdmin: IS_ADMIN });
+  }
+
+  function createPeerConnection(targetId, targetName) {
+    const pc = new RTCPeerConnection(STUN_CONFIG);
+    peers[targetId] = pc;
+
+    const tracksToSend = isScreenSharing && screenStream 
+      ? [screenStream.getVideoTracks()[0], localStream.getAudioTracks()[0]]
+      : localStream.getTracks();
+
+    tracksToSend.forEach(track => {
+      if (track) pc.addTrack(track, isScreenSharing && screenStream ? screenStream : localStream);
+    });
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        socket.emit('ice-candidate', { room: ROOM_TOKEN, target: targetId, candidate: e.candidate });
+      }
     };
 
-    function addVideoTile(id, stream, label, isLocal=false) {
-      const tile = document.createElement('div');
-      tile.className = 'video-tile';
-      tile.id = `tile-${id}`;
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.playsInline = true;
-      if (isLocal) video.muted = true;
-      video.srcObject = stream;
-      const tag = document.createElement('span');
-      tag.className = 'tile-label';
-      tag.textContent = label;
-      tile.appendChild(video);
-      tile.appendChild(tag);
-      videoGrid.appendChild(tile);
-      return video;
-    }
-
-    function removeVideoTile(id) {
-      const tile = document.getElementById(`tile-${id}`);
-      if (tile) tile.remove();
-    }
-
-    function updateCount() {
-      const n = Object.keys(peers).length + 1;
-      participantCountEl.textContent = `${n} in room`;
-    }
-
-    async function init() {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      } catch (err) {
-        alert('Camera/microphone access is required to join the meet. Please allow permissions and reload.');
-        return;
+    pc.ontrack = (e) => {
+      if (!remoteVideos[targetId]) {
+        remoteVideos[targetId] = addVideoTile(targetId, e.streams[0], targetName || 'Participant');
+      } else {
+        remoteVideos[targetId].srcObject = e.streams[0];
       }
-      addVideoTile('local', localStream, `${SELF_NAME} (You)`, true);
-      socket.emit('join-room', { room: ROOM_TOKEN, name: SELF_NAME, isAdmin: IS_ADMIN });
-    }
+    };
 
-    function createPeerConnection(targetId, targetName) {
-      const pc = new RTCPeerConnection(STUN_CONFIG);
-      peers[targetId] = pc;
-
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-      pc.onicecandidate = (e) => {
-        if (e.candidate) {
-          socket.emit('ice-candidate', { room: ROOM_TOKEN, target: targetId, candidate: e.candidate });
-        }
-      };
-
-      pc.ontrack = (e) => {
-        if (!remoteVideos[targetId]) {
-          remoteVideos[targetId] = addVideoTile(targetId, e.streams[0], targetName || 'Participant');
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
-          removeVideoTile(targetId);
-          delete peers[targetId];
-          updateCount();
-        }
-      };
-
-      return pc;
-    }
-
-    socket.on('user-joined', async ({ id, name }) => {
-      const pc = createPeerConnection(id, name);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit('offer', { room: ROOM_TOKEN, target: id, offer, name: SELF_NAME });
-      updateCount();
-    });
-
-    socket.on('offer', async ({ from, offer, name }) => {
-      const pc = createPeerConnection(from, name);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('answer', { room: ROOM_TOKEN, target: from, answer, name: SELF_NAME });
-      updateCount();
-    });
-
-    socket.on('answer', async ({ from, answer }) => {
-      const pc = peers[from];
-      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    });
-
-    socket.on('ice-candidate', async ({ from, candidate }) => {
-      const pc = peers[from];
-      if (pc) {
-        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
-        catch (e) { console.warn('ICE candidate error', e); }
+    pc.onconnectionstatechange = () => {
+      if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+        removeVideoTile(targetId);
+        delete peers[targetId];
+        updateCount();
       }
-    });
+    };
 
-    socket.on('user-left', ({ id }) => {
-      if (peers[id]) { peers[id].close(); delete peers[id]; }
-      delete remoteVideos[id];
-      removeVideoTile(id);
-      updateCount();
-    });
+    return pc;
+  }
 
-    document.getElementById('toggle-mic').addEventListener('click', (e) => {
-      const track = localStream.getAudioTracks()[0];
-      track.enabled = !track.enabled;
-      e.target.textContent = track.enabled ? '🎤' : '🔇';
-    });
+  socket.on('user-joined', async ({ id, name }) => {
+    const pc = createPeerConnection(id, name);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('offer', { room: ROOM_TOKEN, target: id, offer, name: SELF_NAME });
+    updateCount();
+  });
 
-    document.getElementById('toggle-cam').addEventListener('click', (e) => {
-      const track = localStream.getVideoTracks()[0];
+  socket.on('offer', async ({ from, offer, name }) => {
+    const pc = createPeerConnection(from, name);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit('answer', { room: ROOM_TOKEN, target: from, answer, name: SELF_NAME });
+    updateCount();
+  });
+
+  socket.on('answer', async ({ from, answer }) => {
+    const pc = peers[from];
+    if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  });
+
+  socket.on('ice-candidate', async ({ from, candidate }) => {
+    const pc = peers[from];
+    if (pc) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+      catch (e) { console.warn('ICE candidate error', e); }
+    }
+  });
+
+  socket.on('user-left', ({ id }) => {
+    if (peers[id]) { peers[id].close(); delete peers[id]; }
+    delete remoteVideos[id];
+    removeVideoTile(id);
+    updateCount();
+  });
+
+  document.getElementById('toggle-mic').addEventListener('click', (e) => {
+    const track = localStream.getAudioTracks()[0];
+    track.enabled = !track.enabled;
+    e.target.textContent = track.enabled ? '🎤' : '🔇';
+  });
+
+  document.getElementById('toggle-cam').addEventListener('click', (e) => {
+    const track = localStream.getVideoTracks()[0];
+    if (!isScreenSharing) {
       track.enabled = !track.enabled;
       e.target.textContent = track.enabled ? '📷' : '🚫';
-    });
-
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let screenStream = null;
-
-    const recordBtn = document.getElementById('toggle-record');
-    const recIndicator = document.getElementById('rec-indicator');
-
-    if (recordBtn) {
-      recordBtn.addEventListener('click', async () => {
-        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-          try {
-            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-          } catch (err) {
-            alert('Recording requires screen-share permission. Please allow it to start recording.');
-            return;
-          }
-          recordedChunks = [];
-          mediaRecorder = new MediaRecorder(screenStream, { mimeType: 'video/webm;codecs=vp9,opus' });
-          mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-          mediaRecorder.onstop = uploadRecording;
-
-          screenStream.getVideoTracks()[0].addEventListener('ended', () => {
-            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-          });
-
-          mediaRecorder.start();
-          socket.emit('recording-status', { room: ROOM_TOKEN, recording: true });
-          recIndicator.style.display = 'flex';
-          recordBtn.classList.replace('btn-danger', 'btn-outline-danger');
-          recordBtn.textContent = '⏹';
-        } else {
-          mediaRecorder.stop();
-          screenStream.getTracks().forEach(t => t.stop());
-          socket.emit('recording-status', { room: ROOM_TOKEN, recording: false });
-          recIndicator.style.display = 'none';
-          recordBtn.classList.replace('btn-outline-danger', 'btn-danger');
-          recordBtn.textContent = '⏺';
-        }
-      });
+    } else {
+      alert("Cannot toggle camera while sharing screen.");
     }
+  });
 
-    async function uploadRecording() {
-      const blob = new Blob(recordedChunks, { type: 'video/webm' });
-      const formData = new FormData();
-      formData.append('recording', blob, `meet_${ROOM_TOKEN}_${Date.now()}.webm`);
-      formData.append('token', ROOM_TOKEN);
+  // Screen Sharing
+  const screenBtn = document.getElementById('toggle-screen');
+  screenBtn.addEventListener('click', async () => {
+    if (!isScreenSharing) {
       try {
-        const res = await fetch('/upload-recording', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.success) {
-          alert('Recording saved: ' + data.filename);
-        } else {
-          alert('Recording upload failed: ' + (data.message || 'unknown error'));
-        }
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        Object.values(peers).forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (sender) {
+            sender.replaceTrack(screenTrack);
+          }
+        });
+
+        const localVideoEl = document.querySelector('#tile-local video');
+        if (localVideoEl) localVideoEl.srcObject = screenStream;
+
+        screenTrack.onended = () => stopScreenShare();
+
+        screenBtn.classList.add('sharing');
+        screenBtn.textContent = '🛑';
+        isScreenSharing = true;
       } catch (err) {
-        alert('Could not reach server to save the recording. It stayed in this browser tab only — try again before leaving.');
+        console.error("Screen sharing capture failed:", err);
       }
+    } else {
+      stopScreenShare();
     }
+  });
 
-    socket.on('recording-status', ({ recording }) => {
-      if (!IS_ADMIN) {
-        recIndicator.style.display = recording ? 'flex' : 'none';
+  function stopScreenShare() {
+    if (!isScreenSharing) return;
+
+    screenStream.getTracks().forEach(track => track.stop());
+    const cameraTrack = localStream.getVideoTracks()[0];
+
+    Object.values(peers).forEach(pc => {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender && cameraTrack) {
+        sender.replaceTrack(cameraTrack);
       }
     });
 
-    window.addEventListener('beforeunload', () => {
-      socket.emit('leave-room', { room: ROOM_TOKEN });
-    });
+    const localVideoEl = document.querySelector('#tile-local video');
+    if (localVideoEl) localVideoEl.srcObject = localStream;
 
-    init();
-  </script>
-</body>
-</html>
+    screenBtn.classList.remove('sharing');
+    screenBtn.textContent = '🖥️';
+    isScreenSharing = false;
+  }
+
+  // Recording
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordSystemStream = null;
+
+  const recordBtn = document.getElementById('toggle-record');
+  const recIndicator = document.getElementById('rec-indicator');
+
+  if (recordBtn) {
+    recordBtn.addEventListener('click', async () => {
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        try {
+          recordSystemStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        } catch (err) {
+          alert('Recording requires screen permission.');
+          return;
+        }
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(recordSystemStream, { mimeType: 'video/webm;codecs=vp9,opus' });
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = uploadRecording;
+
+        recordSystemStream.getVideoTracks()[0].addEventListener('ended', () => {
+          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        });
+
+        mediaRecorder.start();
+        socket.emit('recording-status', { room: ROOM_TOKEN, recording: true });
+        recIndicator.style.display = 'flex';
+        recordBtn.textContent = '⏹';
+      } else {
+        mediaRecorder.stop();
+        recordSystemStream.getTracks().forEach(t => t.stop());
+        socket.emit('recording-status', { room: ROOM_TOKEN, recording: false });
+        recIndicator.style.display = 'none';
+        recordBtn.textContent = '⏺';
+      }
+    });
+  }
+
+  async function uploadRecording() {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const formData = new FormData();
+    formData.append('recording', blob, `meet_${ROOM_TOKEN}_${Date.now()}.webm`);
+    formData.append('token', ROOM_TOKEN);
+    try {
+      const res = await fetch('/upload-recording', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        alert('Recording uploaded successfully: ' + data.filename);
+      } else {
+        alert('Recording upload failed: ' + (data.message || 'unknown error'));
+      }
+    } catch (err) {
+      alert('Could not contact upload API.');
+    }
+  }
+
+  socket.on('recording-status', ({ recording }) => {
+    if (!IS_ADMIN) {
+      recIndicator.style.display = recording ? 'flex' : 'none';
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    socket.emit('leave-room', { room: ROOM_TOKEN });
+  });
+
+  init();
+</script>
+{% endblock %}
