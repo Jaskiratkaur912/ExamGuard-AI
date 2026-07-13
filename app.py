@@ -407,7 +407,7 @@ def sync_exam_panels(token: str):
             start = datetime.fromisoformat(p['start_time'])
         except Exception:
             continue
-        end   = start + datetime.timedelta(minutes=int(p.get('duration_minutes', 60)))
+        end   = start + timedelta(minutes=int(p.get('duration_minutes', 60)))
         label = f"{p['title']}  ·  {p['start_time'].replace('T',' ')}  ·  {p['duration_minutes']} min  ·  {p['type'].upper()}"
         if now < start:
             upcoming.append(label)
