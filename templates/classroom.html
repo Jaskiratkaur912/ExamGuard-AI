@@ -531,6 +531,9 @@
                     <a href="/classroom/{{ classroom.token }}/proctor/{{ paper.id }}" class="btn btn-warning-custom btn-sm py-1.5 px-3 fw-bold small">
                       <i class="bi bi-eye"></i> Monitor
                     </a>
+                    <a href="/ml-dashboard/exam/{{ paper.id }}" class="btn btn-sm py-1.5 px-3 fw-bold small" style="background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.5);color:#a5b4fc">
+  <i class="bi bi-graph-up"></i> ML Analysis
+</a>
                     <form action="/classroom/{{ classroom.token }}/delete-exam/{{ paper.id }}" method="POST" onsubmit="return confirm('Delete this exam permanently?');" class="m-0">
                       <button type="submit" class="btn btn-danger-custom btn-sm py-1.5 px-3 fw-bold small">
                         <i class="bi bi-trash"></i> Delete

@@ -35,6 +35,18 @@
       "password": "scrypt:32768:8:1$PSTezU8zOr1jzS98$af78a0f0d76d2b269d6e12b017abe7d558cf6816daceed7e7fc3fd2b4e893629f357da9ea28f584f7692aca70c0ef9eb760ca11458a68494a496fcbf5c64d929",
       "role": "admin",
       "otp": null
+    },
+    "kjj@gmail.com": {
+      "full_name": "jk",
+      "password": "scrypt:32768:8:1$7mRiRCJDi4JBsky4$08770973afc8700662f73e321e35343f8cee1ce07b8bc5ca57e2fc6800e993563c2ead81a1c42d633d3dd65720aa1365406758ce416a6e01f86b31419ebb01f3",
+      "role": "admin",
+      "otp": null
+    },
+    "kjj2@gmail.com": {
+      "full_name": "jk",
+      "password": "scrypt:32768:8:1$tRbiGnmxxiBoqMnv$79afcd5fd698f5372c9f0945167495168f12effcccc0c4d9ecc58229eaea6556edb3980a23bf141face7efedef8220efec31101c8a1f7cff763fb1dc8dd8945d",
+      "role": "admin",
+      "otp": null
     }
   },
   "classrooms": [
@@ -61,6 +73,16 @@
       "name": "dsa",
       "token": "KI6VAI",
       "owner_email": "K@gmail.com"
+    },
+    {
+      "name": "cyber security",
+      "token": "KS5S0B",
+      "owner_email": "kjj@gmail.com"
+    },
+    {
+      "name": "cyber security",
+      "token": "WRV084",
+      "owner_email": "kjj2@gmail.com"
     }
   ],
   "enrollments": {
@@ -114,6 +136,18 @@
       {
         "timestamp": "2026-07-13 20:14:33",
         "log": "Classroom created by K@gmail.com"
+      }
+    ],
+    "KS5S0B": [
+      {
+        "timestamp": "2026-07-13 20:20:06",
+        "log": "Classroom created by kjj@gmail.com"
+      }
+    ],
+    "WRV084": [
+      {
+        "timestamp": "2026-07-14 01:16:16",
+        "log": "Classroom created by kjj2@gmail.com"
       }
     ]
   },
@@ -233,6 +267,22 @@
       {
         "event": "signup+login",
         "timestamp": "2026-07-13 20:09:59",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+      }
+    ],
+    "kjj@gmail.com": [
+      {
+        "event": "signup+login",
+        "timestamp": "2026-07-13 20:19:58",
+        "ip": "127.0.0.1",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+      }
+    ],
+    "kjj2@gmail.com": [
+      {
+        "event": "signup+login",
+        "timestamp": "2026-07-14 01:16:04",
         "ip": "127.0.0.1",
         "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
       }

@@ -57,7 +57,7 @@
                 </div>
                 <div class="card-body">
                     <p class="mb-2">
-                        <strong>Score:</strong> <span class="badge bg-primary">{{ submission.marks_obtained|default('N/A') }} / {{ submission.total_marks|default('N/A') }}</span>
+                        <strong>Score:</strong> <span class="badge bg-primary">{{ submission.score|default('N/A') }} / {{ submission.total|default('N/A') }}</span>
                     </p>
                     <p class="mb-2">
                         <strong>Status:</strong> 
@@ -145,23 +145,11 @@
                     <h6 class="mb-0">🚩 Detected Violations ({{ analysis.flags|length }})</h6>
                 </div>
                 <div class="card-body">
-                    {% for flag in analysis.flags %}
-                    <div class="alert alert-{% if flag.severity == 'critical' %}danger{% elif flag.severity == 'high' %}warning{% elif flag.severity == 'medium' %}info{% else %}success{% endif %} mb-2">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <h6 class="mb-1">{{ flag.reason }}</h6>
-                                <p class="small mb-0">{{ flag.description }}</p>
-                            </div>
-                            <div class="col-md-4 text-md-end">
-                                <span class="badge bg-{% if flag.severity == 'critical' %}danger{% elif flag.severity == 'high' %}warning{% elif flag.severity == 'medium' %}info{% else %}success{% endif %}">
-                                    {{ flag.severity|upper }}
-                                </span>
-                                <br>
-                                <small class="text-muted">Weight: {{ (flag.weight * 100)|int }}%</small>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
+                     {% for flag in analysis.flags %}
+<div class="alert alert-warning mb-2">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ flag }}
+</div>
+{% endfor %}
                 </div>
             </div>
         </div>
