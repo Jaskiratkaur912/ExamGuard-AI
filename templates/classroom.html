@@ -693,7 +693,7 @@
 
 <!-- Create Exam Modal Overlay -->
 <div class="modal fade" id="createExamModal" tabindex="-1" aria-hidden="true" style="background: rgba(3,5,11,0.85); backdrop-filter: blur(8px);">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content modal-content-custom">
       <div class="modal-header modal-header-custom">
         <h5 class="modal-title fw-bold text-gradient-cyan"><i class="bi bi-file-earmark-plus"></i> Initialize Assessment</h5>
@@ -702,18 +702,46 @@
 
       <form action="/classroom/{{ classroom.token }}/create-exam" method="POST" enctype="multipart/form-data" id="exam-create-form" class="m-0">
         <div class="modal-body p-4">
-          <div class="mb-4 d-flex gap-2">
+
+          <!-- EXAM TYPE SELECTOR — 4 types now -->
+          <div class="mb-4 d-flex gap-2 flex-wrap">
             <input type="radio" class="btn-check" name="exam_type" id="type-pdf" value="pdf" checked>
-            <label class="btn btn-secondary-custom flex-fill py-2.5 fw-bold" for="type-pdf"><i class="bi bi-filetype-pdf"></i> PDF Question Paper</label>
+            <label class="btn btn-secondary-custom flex-fill py-2 fw-bold" for="type-pdf">
+              <i class="bi bi-filetype-pdf"></i> PDF Paper
+            </label>
             <input type="radio" class="btn-check" name="exam_type" id="type-mcq" value="mcq">
-            <label class="btn btn-secondary-custom flex-fill py-2.5 fw-bold" for="type-mcq"><i class="bi bi-patch-question"></i> MCQ Interactive Test</label>
+            <label class="btn btn-secondary-custom flex-fill py-2 fw-bold" for="type-mcq">
+              <i class="bi bi-patch-question"></i> MCQ Test
+            </label>
+            <input type="radio" class="btn-check" name="exam_type" id="type-bank" value="bank">
+            <label class="btn btn-secondary-custom flex-fill py-2 fw-bold" for="type-bank">
+              <i class="bi bi-shuffle"></i> 🎲 Question Bank
+            </label>
+            <input type="radio" class="btn-check" name="exam_type" id="type-theory" value="theory">
+            <label class="btn btn-secondary-custom flex-fill py-2 fw-bold" for="type-theory">
+              <i class="bi bi-keyboard"></i> 📝 Theory + AI Grader
+            </label>
           </div>
 
+          <!-- Type hint banners -->
+          <div id="hint-pdf" class="alert alert-secondary py-2 small mb-3">
+            📄 <strong>PDF Paper</strong> — Upload a PDF. Students view it in a locked exam room. Optionally add AI keyword grading for evaluation.
+          </div>
+          <div id="hint-mcq" class="alert alert-primary py-2 small mb-3 d-none">
+            🧩 <strong>MCQ Test</strong> — Build questions manually. Same paper for all students.
+          </div>
+          <div id="hint-bank" class="alert alert-success py-2 small mb-3 d-none">
+            🎲 <strong>Question Bank</strong> — Add 50–500 questions. The ML model gives every student a <strong>unique randomized subset</strong> with shuffled option order — prevents cheating via answer sharing.
+          </div>
+          <div id="hint-theory" class="alert alert-warning py-2 small mb-3 d-none">
+            📝 <strong>Theory + AI Grader</strong> — Students write text answers. The <strong>ML NLP model</strong> automatically grades using keyword coverage + semantic similarity and returns a score + explanation.
+          </div>
+
+          <!-- Common fields -->
           <div class="form-group-custom">
             <label class="form-label-custom">Exam Title</label>
             <input type="text" name="title" class="form-control-custom" placeholder="e.g. Midterm Assessment" required autocomplete="off">
           </div>
-
           <div class="row g-3 mb-3">
             <div class="col-md-6 form-group-custom">
               <label class="form-label-custom">Start Date &amp; Time</label>
@@ -725,23 +753,80 @@
             </div>
           </div>
 
+          <!-- ── PDF AREA ─────────────────────────────────────── -->
           <div id="pdf-upload-area" class="form-group-custom">
             <label class="form-label-custom">Upload Question Paper (PDF)</label>
             <input type="file" name="exam_pdf" accept=".pdf" class="form-control-custom">
+            <div class="mt-3 p-3 rounded" style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.2)">
+              <p class="text-warning small fw-bold mb-2">📝 Optional: AI Keyword Evaluation for written answers on this PDF</p>
+              <p class="text-muted small mb-2">If students submit written answers alongside the PDF, add expected keywords below and the AI will evaluate their responses automatically.</p>
+              <input type="text" name="pdf_keywords" class="form-control-custom form-control-sm" placeholder="e.g. photosynthesis, chlorophyll, glucose, sunlight (comma-separated)">
+              <input type="text" name="pdf_model_answer" class="form-control-custom form-control-sm mt-2" placeholder="Optional: model answer for similarity scoring">
+            </div>
           </div>
 
+          <!-- ── MCQ BUILDER AREA ───────────────────────────────── -->
           <div id="mcq-builder-area" class="d-none">
-            <label class="form-label-custom">MCQ Questions builder</label>
+            <label class="form-label-custom">MCQ Questions</label>
             <div id="mcq-questions-list" class="d-flex flex-column gap-3"></div>
             <button type="button" id="add-question-btn" class="btn btn-secondary-custom w-100 mt-3 py-2">
-              <i class="bi bi-plus"></i> Add Question Card
+              <i class="bi bi-plus"></i> Add Question
+            </button>
+          </div>
+
+          <!-- ── QUESTION BANK AREA ─────────────────────────────── -->
+          <div id="bank-builder-area" class="d-none">
+            <div class="row g-3 mb-3">
+              <div class="col-md-4 form-group-custom">
+                <label class="form-label-custom">Questions to show per student</label>
+                <input type="number" name="select_count" class="form-control-custom" value="30" min="5" max="200">
+                <small class="text-muted">Students each get this many randomly selected questions</small>
+              </div>
+              <div class="col-md-8 d-flex align-items-end">
+                <div class="alert alert-success py-2 small w-100 mb-0">
+                  ✓ Each student gets a <strong>unique paper</strong> — options within each question are also shuffled per student
+                </div>
+              </div>
+            </div>
+            <label class="form-label-custom">Question Bank <span class="text-success" id="bank-count">(0 questions)</span></label>
+            <div id="bank-questions-list" class="d-flex flex-column gap-2 mb-2" style="max-height:380px;overflow-y:auto"></div>
+            <div class="d-flex gap-2">
+              <button type="button" id="add-bank-question-btn" class="btn btn-secondary-custom flex-fill py-2">
+                <i class="bi bi-plus"></i> Add Question
+              </button>
+              <button type="button" class="btn btn-outline-secondary py-2" onclick="document.getElementById('bulk-import-area').classList.toggle('d-none')">
+                📋 Bulk Paste
+              </button>
+            </div>
+            <!-- Bulk import -->
+            <div id="bulk-import-area" class="d-none mt-3 p-3 rounded" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1)">
+              <p class="text-muted small mb-2">Paste questions in this format (one per line):</p>
+              <code class="small text-success">Question text | Option A | Option B | Option C | Option D | correct(0-3) | category | difficulty</code>
+              <textarea id="bulk-text" class="form-control-custom mt-2" rows="6" placeholder="What is 2+2? | 3 | 4 | 5 | 6 | 1 | Math | easy&#10;Capital of France? | London | Paris | Berlin | Rome | 1 | Geography | easy"></textarea>
+              <button type="button" class="btn btn-success btn-sm mt-2" onclick="parseBulkImport()">Import Questions</button>
+              <span id="bulk-result" class="small text-muted ms-2"></span>
+            </div>
+          </div>
+
+          <!-- ── THEORY GRADER AREA ─────────────────────────────── -->
+          <div id="theory-builder-area" class="d-none">
+            <div class="alert alert-warning py-2 small mb-3">
+              📝 The AI grader scores each answer using: <strong>keyword coverage (40%)</strong> + <strong>semantic similarity (40%)</strong> + length + structure.
+            </div>
+            <label class="form-label-custom">Theory Questions</label>
+            <div id="theory-questions-list" class="d-flex flex-column gap-3"></div>
+            <button type="button" id="add-theory-btn" class="btn btn-secondary-custom w-100 mt-3 py-2">
+              <i class="bi bi-plus"></i> Add Theory Question
             </button>
           </div>
 
         </div>
-        <div class="modal-footer modal-footer-custom">
-          <button type="button" class="btn btn-secondary-custom py-2.5 px-4" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary-custom py-2.5 px-4 fw-bold">Create Exam</button>
+        <div class="modal-footer modal-footer-custom d-flex justify-content-between align-items-center">
+          <small id="form-status" class="text-muted"></small>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-secondary-custom py-2 px-4" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary-custom py-2 px-4 fw-bold">Create Exam</button>
+          </div>
         </div>
       </form>
     </div>
@@ -795,29 +880,210 @@
 
   const typePdfRadio = document.getElementById('type-pdf');
   const typeMcqRadio = document.getElementById('type-mcq');
+  const typeBankRadio = document.getElementById('type-bank');
+  const typeTheoryRadio = document.getElementById('type-theory');
   const pdfArea = document.getElementById('pdf-upload-area');
   const mcqArea = document.getElementById('mcq-builder-area');
+  const bankArea = document.getElementById('bank-builder-area');
+  const theoryArea = document.getElementById('theory-builder-area');
   const mcqList = document.getElementById('mcq-questions-list');
+  const bankList = document.getElementById('bank-questions-list');
+  const theoryList = document.getElementById('theory-questions-list');
+  const bankCount = document.getElementById('bank-count');
   const addQuestionBtn = document.getElementById('add-question-btn');
+  const addBankQuestionBtn = document.getElementById('add-bank-question-btn');
+  const addTheoryBtn = document.getElementById('add-theory-btn');
 
-  let questionIndex = 0;
+  let mcqQuestionIndex = 0;
+  let bankQuestionIndex = 0;
+  let theoryQuestionIndex = 0;
 
-  typePdfRadio.addEventListener('change', () => {
-    pdfArea.classList.remove('d-none');
-    mcqArea.classList.add('d-none');
-    document.querySelector('[name="exam_pdf"]').setAttribute('required', '');
-  });
+  function setPdfRequired(required) {
+    const pdfInput = document.querySelector('[name="exam_pdf"]');
+    if (!pdfInput) return;
+    if (required) pdfInput.setAttribute('required', '');
+    else pdfInput.removeAttribute('required');
+  }
 
-  typeMcqRadio.addEventListener('change', () => {
-    pdfArea.classList.add('d-none');
-    mcqArea.classList.remove('d-none');
-    document.querySelector('[name="exam_pdf"]').removeAttribute('required');
-    if (mcqList.children.length === 0) {
-      addQuestionCard();
-    }
-  });
+  function toggleExamType(type) {
+    pdfArea.classList.toggle('d-none', type !== 'pdf');
+    mcqArea.classList.toggle('d-none', type !== 'mcq');
+    bankArea.classList.toggle('d-none', type !== 'bank');
+    theoryArea.classList.toggle('d-none', type !== 'theory');
+
+    setPdfRequired(type === 'pdf');
+
+    document.getElementById('hint-pdf').classList.toggle('d-none', type !== 'pdf');
+    document.getElementById('hint-mcq').classList.toggle('d-none', type !== 'mcq');
+    document.getElementById('hint-bank').classList.toggle('d-none', type !== 'bank');
+    document.getElementById('hint-theory').classList.toggle('d-none', type !== 'theory');
+
+    if (type === 'mcq' && mcqList.children.length === 0) addQuestionCard();
+    if (type === 'bank' && bankList.children.length === 0) addBankQuestionCard();
+    if (type === 'theory' && theoryList.children.length === 0) addTheoryQuestionCard();
+  }
+
+  typePdfRadio.addEventListener('change', () => toggleExamType('pdf'));
+  typeMcqRadio.addEventListener('change', () => toggleExamType('mcq'));
+  typeBankRadio.addEventListener('change', () => toggleExamType('bank'));
+  typeTheoryRadio.addEventListener('change', () => toggleExamType('theory'));
 
   addQuestionBtn.addEventListener('click', addQuestionCard);
+  addBankQuestionBtn.addEventListener('click', addBankQuestionCard);
+  addTheoryBtn.addEventListener('click', addTheoryQuestionCard);
+
+  function updateBankCount() {
+    if (!bankCount) return;
+    bankCount.textContent = `(${bankList.children.length} questions)`;
+  }
+
+  function addQuestionCard() {
+    const card = document.createElement('div');
+    card.className = 'card bg-dark bg-opacity-30 border border-secondary border-opacity-10 p-3 rounded';
+    card.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-white-50 font-mono small">Question #${mcqQuestionIndex + 1}</span>
+        <button type="button" class="btn btn-sm btn-danger-custom py-0 px-2" onclick="this.closest('.card').remove();">Remove</button>
+      </div>
+      <div class="mb-3">
+        <input type="text" name="question_text[]" class="form-control-custom form-control-sm" placeholder="Question prompt..." required>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <input type="text" name="option_0[]" class="form-control-custom form-control-sm" placeholder="Option A" required>
+        </div>
+        <div class="col-md-6">
+          <input type="text" name="option_1[]" class="form-control-custom form-control-sm" placeholder="Option B" required>
+        </div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <input type="text" name="option_2[]" class="form-control-custom form-control-sm" placeholder="Option C" required>
+        </div>
+        <div class="col-md-6">
+          <input type="text" name="option_3[]" class="form-control-custom form-control-sm" placeholder="Option D" required>
+        </div>
+      </div>
+      <div>
+        <label class="form-label text-muted small me-2">Correct Option index:</label>
+        <select name="correct_index[]" class="form-control-custom form-control-sm d-inline-block w-auto" style="padding-top: 6px; padding-bottom: 6px;">
+          <option value="0">A</option>
+          <option value="1">B</option>
+          <option value="2">C</option>
+          <option value="3">D</option>
+        </select>
+      </div>
+    `;
+    mcqList.appendChild(card);
+    mcqQuestionIndex++;
+  }
+
+  function addBankQuestionCard() {
+    const card = document.createElement('div');
+    card.className = 'card bg-dark bg-opacity-20 border border-secondary border-opacity-10 p-3 rounded';
+    card.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-white-50 font-mono small">Bank Question #${bankQuestionIndex + 1}</span>
+        <button type="button" class="btn btn-sm btn-danger-custom py-0 px-2" onclick="this.closest('.card').remove(); updateBankCount();">Remove</button>
+      </div>
+      <div class="mb-3">
+        <input type="text" name="bank_question_text[]" class="form-control-custom form-control-sm" placeholder="Question text..." required>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <input type="text" name="bank_option_0[]" class="form-control-custom form-control-sm" placeholder="Option A" required>
+        </div>
+        <div class="col-md-6">
+          <input type="text" name="bank_option_1[]" class="form-control-custom form-control-sm" placeholder="Option B" required>
+        </div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <input type="text" name="bank_option_2[]" class="form-control-custom form-control-sm" placeholder="Option C" required>
+        </div>
+        <div class="col-md-6">
+          <input type="text" name="bank_option_3[]" class="form-control-custom form-control-sm" placeholder="Option D" required>
+        </div>
+      </div>
+      <div>
+        <label class="form-label text-muted small me-2">Correct Option index:</label>
+        <select name="bank_correct_index[]" class="form-control-custom form-control-sm d-inline-block w-auto" style="padding-top: 6px; padding-bottom: 6px;">
+          <option value="0">A</option>
+          <option value="1">B</option>
+          <option value="2">C</option>
+          <option value="3">D</option>
+        </select>
+      </div>
+    `;
+    bankList.appendChild(card);
+    bankQuestionIndex++;
+    updateBankCount();
+  }
+
+  function addTheoryQuestionCard() {
+    const card = document.createElement('div');
+    card.className = 'card bg-dark bg-opacity-20 border border-secondary border-opacity-10 p-3 rounded';
+    card.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-white-50 font-mono small">Theory Question #${theoryQuestionIndex + 1}</span>
+        <button type="button" class="btn btn-sm btn-danger-custom py-0 px-2" onclick="this.closest('.card').remove();">Remove</button>
+      </div>
+      <div class="mb-3">
+        <input type="text" name="theory_question_text[]" class="form-control-custom form-control-sm" placeholder="Question prompt..." required>
+      </div>
+      <div class="mb-3">
+        <textarea name="theory_model_answer[]" class="form-control-custom form-control-sm" rows="3" placeholder="Expected answer guidance / model response..."></textarea>
+      </div>
+    `;
+    theoryList.appendChild(card);
+    theoryQuestionIndex++;
+  }
+
+  function parseBulkImport() {
+    const raw = document.getElementById('bulk-text').value.trim();
+    const result = document.getElementById('bulk-result');
+    if (!raw) {
+      if (result) result.textContent = 'Paste at least one valid line.';
+      return;
+    }
+
+    const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
+    let imported = 0;
+    let errors = 0;
+
+    lines.forEach(line => {
+      const parts = line.split('|').map(part => part.trim());
+      if (parts.length < 6) {
+        errors++;
+        return;
+      }
+      const [questionText, optA, optB, optC, optD, correct] = parts;
+      if (!questionText || !optA || !optB || !optC || !optD) {
+        errors++;
+        return;
+      }
+      const correctIndex = Number(correct);
+      if (Number.isNaN(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+        errors++;
+        return;
+      }
+      addBankQuestionCard();
+      const latest = bankList.lastElementChild;
+      if (latest) {
+        latest.querySelector('[name="bank_question_text[]"]').value = questionText;
+        latest.querySelector('[name="bank_option_0[]"]').value = optA;
+        latest.querySelector('[name="bank_option_1[]"]').value = optB;
+        latest.querySelector('[name="bank_option_2[]"]').value = optC;
+        latest.querySelector('[name="bank_option_3[]"]').value = optD;
+        latest.querySelector('[name="bank_correct_index[]"]').value = correctIndex;
+      }
+      imported++;
+    });
+
+    if (result) {
+      result.textContent = `${imported} question(s) imported${errors ? `, ${errors} line(s) skipped` : ''}.`;
+    }
+  }
 
   function addQuestionCard() {
     const card = document.createElement('div');
