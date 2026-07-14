@@ -1357,8 +1357,8 @@ def ml_exam_analysis(exam_id):
     # Find exam details
     exam = None
     classroom_token = None
-    for token, data in EXAM_DATABASE.items():
-        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+    for token, papers in EXAM_PAPERS_DATABASE.items():
+        for paper in papers:
             if paper.get('id') == exam_id:
                 exam = paper
                 classroom_token = token
@@ -1388,8 +1388,8 @@ def ml_exam_analysis(exam_id):
         
         # Run ML analysis
         score_pct = None
-        if submission.get('marks_obtained') and submission.get('total_marks'):
-            score_pct = (submission['marks_obtained'] / submission['total_marks']) * 100
+        sc = submission.get('score'); tot = submission.get('total')
+        score_pct = (sc / tot) if (sc is not None and tot) else None
         
         analysis = calculate_ml_cheating_analysis(
             student_email=student_email,
@@ -1402,11 +1402,11 @@ def ml_exam_analysis(exam_id):
             analyses.append({
                 "student_name": student_name,
                 "student_email": student_email,
-                "cheating_score": analysis.get("cheating_score", 0),
+                "cheating_score": analysis.get("score", 0),
                 "risk_level": analysis.get("risk_level", "unknown"),
                 "breakdown": analysis.get("breakdown", {}),
                 "flags": analysis.get("flags", []),
-                "exam_score": f"{submission.get('marks_obtained', 0)}/{submission.get('total_marks', 0)}",
+                "exam_score": f"{submission.get('score', 'N/A')}/{submission.get('total', 'N/A')}",
                 "submission_status": submission.get("status", "not_submitted"),
             })
     
@@ -1422,8 +1422,8 @@ def ml_student_detailed(student_email, exam_id):
     # Find exam and classroom
     classroom_token = None
     exam = None
-    for token, data in EXAM_DATABASE.items():
-        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+    for token, papers in EXAM_PAPERS_DATABASE.items():
+        for paper in papers:
             if paper.get('id') == exam_id:
                 exam = paper
                 classroom_token = token
@@ -1479,8 +1479,8 @@ def api_cheating_analysis(student_email, exam_id):
     # Find exam
     classroom_token = None
     exam = None
-    for token, data in EXAM_DATABASE.items():
-        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+    for token, papers in EXAM_PAPERS_DATABASE.items():
+        for paper in papers:
             if paper.get('id') == exam_id:
                 exam = paper
                 classroom_token = token
@@ -1522,8 +1522,8 @@ def api_exam_statistics(exam_id):
     # Find exam
     classroom_token = None
     exam = None
-    for token, data in EXAM_DATABASE.items():
-        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+    for token, papers in EXAM_PAPERS_DATABASE.items():
+        for paper in papers:
             if paper.get('id') == exam_id:
                 exam = paper
                 classroom_token = token
@@ -1556,7 +1556,7 @@ def api_exam_statistics(exam_id):
         )
         
         if analysis:
-            cheating_score = analysis.get("cheating_score", 0)
+            cheating_score = analysis.get("score", 0)
             total_score += cheating_score
             if analysis.get("risk_level") in ["high", "critical"]:
                 high_risk_count += 1
@@ -1587,9 +1587,10 @@ def api_browser_events(student_email, exam_id):
     
     # Find exam
     classroom_token = None
-    for token, data in EXAM_DATABASE.items():
-        for paper in EXAM_PAPERS_DATABASE.get(token, []):
+    for token, papers in EXAM_PAPERS_DATABASE.items():
+        for paper in papers:
             if paper.get('id') == exam_id:
+                exam = paper
                 classroom_token = token
                 break
     
