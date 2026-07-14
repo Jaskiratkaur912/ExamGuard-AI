@@ -1021,6 +1021,21 @@ def take_exam(token, exam_id):
     classroom = next((c for c in CLASSROOM_DATABASE if c['token'] == tok), None)
     # Issue an exam JWT so the PDF can be securely fetched
     access_token = jwt_encode({'email': email, 'token': tok, 'exam_id': exam_id}, JWT_SECRET, expires_in=7200)
+    # BANK EXAM: generate unique randomized question set for this student
+    if paper.get('type') == 'bank' and ML_ENABLED:
+        bank = QuestionBankRandomizer(paper['questions'])
+        n = paper.get('select_count', min(60, len(paper['questions'])))
+        student_exam = bank.generate_for_student(email, n=n, seed_salt=exam_id)
+        EXAM_SUBMISSIONS_DB.setdefault(email, {})[f"{exam_id}_key"] = student_exam['answer_key']
+        save_system_data()
+        paper_render = dict(paper)
+        paper_render['questions'] = student_exam['questions']
+        paper_render['exam_token'] = student_exam['exam_token']
+        log_activity(tok, f"Student {email} entered bank exam '{paper['title']}' ({student_exam['total']} questions selected)")
+        return render_template('exam_room.html', paper=paper_render, token=tok,
+                               classroom=classroom, student_email=email,
+                               access_token=access_token)
+
     log_activity(tok, f"Student {email} entered exam '{paper['title']}'")
     return render_template('exam_room.html', paper=paper, token=tok,
                            classroom=classroom, student_email=email,
@@ -1043,17 +1058,66 @@ def submit_exam(token, exam_id):
         score = sum(1 for i, q in enumerate(qs)
                     if answers.get(str(i)) is not None
                     and int(answers[str(i)]) == q['correct_index'])
-    EXAM_SUBMISSIONS_DB.setdefault(email, {})[exam_id] = {
+
+    elif paper.get('type') == 'bank' and ML_ENABLED:
+        answer_key = EXAM_SUBMISSIONS_DB.get(email, {}).get(f"{exam_id}_key", {})
+        bank = QuestionBankRandomizer(paper['questions'])
+        bank_result = bank.score_submission(answer_key, answers)
+        score = bank_result['score']; total = bank_result['total']
+
+    elif paper.get('type') == 'theory':
+        try:
+            from exam_intelligence import TheoryAnswerGrader
+            grader = TheoryAnswerGrader()
+            qs = paper.get('questions', [])
+            earned = 0.0; total_marks = 0.0; theory_results = []
+            for i, q in enumerate(qs):
+                student_ans = answers.get(str(i), '')
+                gr = grader.grade(student_ans, q.get('model_answer',''),
+                                  keywords=q.get('keywords',[]),
+                                  max_marks=float(q.get('max_marks', 5.0)))
+                earned += gr['marks_awarded']; total_marks += gr['max_marks']
+                theory_results.append({"question": q['question'], "student_answer": student_ans, "result": gr})
+            score = round(earned, 1); total = total_marks
+        except Exception as e:
+            print(f"[ERROR] Theory grading failed: {e}")
+            score = None; total = None
+
+    # ── ML CHEATING RISK SCORE ────────────────────────────────────────────
+    risk_score = 0; risk_level = "LOW"; risk_summary = ""
+    if ML_ENABLED:
+        try:
+            score_pct = (score / total) if (score is not None and total and total > 0) else None
+            risk = compute_cheating_score(violations,
+                       exam_duration_minutes=paper.get('duration_minutes', 60),
+                       exam_score_pct=score_pct)
+            risk_score = risk['score']; risk_level = risk['risk_level']
+            risk_summary = risk['summary']
+            socketio.emit('risk-score-update',
+                {"student": email, "risk_score": risk_score,
+                 "risk_level": risk_level, "risk_summary": risk_summary},
+                room=f"proctor-{tok}-{exam_id}")
+        except Exception as e:
+            print(f"[ERROR] Risk scoring failed: {e}")
+
+    submission = {
         "exam_title": paper['title'], "token": tok,
         "answers": answers, "score": score, "total": total,
-        "violations": violations, "submitted_at": _now()
+        "violations": violations, "submitted_at": _now(),
+        "risk_score": risk_score, "risk_level": risk_level, "risk_summary": risk_summary,
     }
+    if paper.get('type') == 'theory' and 'theory_results' in locals():
+        submission['theory_results'] = theory_results
+
+    EXAM_SUBMISSIONS_DB.setdefault(email, {})[exam_id] = submission
+
     # Log every violation as a browser event
     for v in violations:
         log_browser_event(email, v.get('type', 'violation'), v.get('reason', ''), exam_id)
     save_system_data()
-    log_activity(tok, f"Student {email} submitted exam '{paper['title']}' — score {score}/{total}")
-    return jsonify({"success": True, "score": score, "total": total})
+    log_activity(tok, f"Student {email} submitted exam '{paper['title']}' — score {score}/{total} — risk {risk_level} ({risk_score})")
+    return jsonify({"success": True, "score": score, "total": total,
+                    "risk_score": risk_score, "risk_level": risk_level})
 
 # ─────────────────────────────────────────────
 # LIVE PROCTORING (browser events → server)
@@ -1265,7 +1329,7 @@ def _on_disconnect():
 
 try:
     from cheating_score import compute_cheating_score
-    from exam_intelligence import QuestionBankRandomizer
+    from exam_intelligence import QuestionBankRandomizer, TheoryAnswerGrader
     ML_ENABLED = True
 except ImportError:
     print("[WARN] ML models (cheating_score.py, exam_intelligence.py) not found")
@@ -1337,6 +1401,87 @@ def calculate_ml_cheating_analysis(student_email: str, exam_id: str = "", exam_d
 # ─────────────────────────────────────────────
 # ML DASHBOARD ROUTES
 # ─────────────────────────────────────────────
+
+
+@app.route('/classroom/<token>/ml-exams')
+@require_role('admin')
+def ml_classroom_exams(token):
+    """Lists all exams in a classroom with ML analysis links."""
+    email = session['user_email']
+    classroom = owned_classroom(token, email)
+    if not classroom: return "Access Denied", 403
+    tok = token.upper()
+    papers = EXAM_PAPERS_DATABASE.get(tok, [])
+    # Attach submission count per exam
+    for p in papers:
+        p['_submission_count'] = sum(
+            1 for subs in EXAM_SUBMISSIONS_DB.values()
+            if p['id'] in subs and not p['id'].endswith('_key')
+        )
+    return render_template('ml_classroom_exams.html',
+        classroom=classroom, papers=papers, token=tok)
+
+
+@app.route('/api/ml/generate-questions/<token>/<exam_id>', methods=['POST'])
+@require_role('student')
+def api_generate_questions(token, exam_id):
+    """Generate personalized randomized question set for bank exam."""
+    if not ML_ENABLED:
+        return jsonify({"error": "ML not enabled"}), 503
+    email = session['user_email']
+    tok = token.upper()
+    if tok not in STUDENT_ENROLLMENTS.get(email, []):
+        return jsonify({"error": "Not enrolled"}), 403
+    paper = next((e for e in EXAM_PAPERS_DATABASE.get(tok,[]) if e['id']==exam_id), None)
+    if not paper or paper.get('type') != 'bank':
+        return jsonify({"error": "Not a bank exam"}), 404
+    bank = QuestionBankRandomizer(paper['questions'])
+    n = int(request.json.get('n', paper.get('select_count', min(60, len(paper['questions'])))))
+    result = bank.generate_for_student(email, n=n, seed_salt=exam_id)
+    EXAM_SUBMISSIONS_DB.setdefault(email, {})[f"{exam_id}_key"] = result['answer_key']
+    save_system_data()
+    return jsonify({
+        "exam_token": result['exam_token'],
+        "questions": result['questions'],
+        "total": result['total'],
+        "categories": result['categories_covered'],
+    })
+
+
+@app.route('/api/ml/grade-theory', methods=['POST'])
+def api_grade_theory():
+    """Grade a single theory answer against model answer + keywords."""
+    try:
+        from exam_intelligence import TheoryAnswerGrader
+    except ImportError:
+        return jsonify({"error": "ML not enabled"}), 503
+    data = request.get_json(force=True) or {}
+    if not data.get('student_answer') or not data.get('model_answer'):
+        return jsonify({"error": "student_answer and model_answer required"}), 400
+    grader = TheoryAnswerGrader()
+    result = grader.grade(
+        student_answer=data['student_answer'],
+        model_answer=data['model_answer'],
+        keywords=data.get('keywords', []),
+        max_marks=float(data.get('max_marks', 10))
+    )
+    return jsonify(result)
+
+
+@app.route('/api/ml/question-bank-stats/<token>/<exam_id>')
+@require_role('admin')
+def api_question_bank_stats(token, exam_id):
+    """Returns question bank statistics for ML dashboard."""
+    if not ML_ENABLED:
+        return jsonify({"error": "ML not enabled"}), 503
+    tok = token.upper()
+    if not owned_classroom(tok, session['user_email']):
+        return jsonify({"error": "Access denied"}), 403
+    paper = next((e for e in EXAM_PAPERS_DATABASE.get(tok,[]) if e['id']==exam_id), None)
+    if not paper or paper.get('type') != 'bank':
+        return jsonify({"error": "Not a bank exam"}), 404
+    bank = QuestionBankRandomizer(paper['questions'])
+    return jsonify(bank.stats())
 
 @app.route('/ml-dashboard')
 @require_role('admin')
@@ -1610,6 +1755,56 @@ def api_browser_events(student_email, exam_id):
         "events": exam_events
     }), 200
 
+
+
+@app.route('/classroom/<token>/exam/<exam_id>/results')
+@require_role('admin')
+def exam_results(token, exam_id):
+    if not owned_classroom(token, session['user_email']): return "Access Denied", 403
+    tok = token.upper()
+    paper = next((e for e in EXAM_PAPERS_DATABASE.get(tok,[]) if e['id']==exam_id), None)
+    if not paper: return "Exam not found.", 404
+    submissions=[]; scores=[]; flagged=passed=0
+    for email, subs in EXAM_SUBMISSIONS_DB.items():
+        if exam_id in subs and not exam_id.endswith('_key'):
+            sub=subs[exam_id]; sc=sub.get('score'); tot=sub.get('total')
+            pct=int(sc/tot*100) if sc is not None and tot else 0
+            submissions.append({"student_email":email,"student_name":USER_DATABASE.get(email,{}).get('full_name',''),"score":sc,"total":tot,"violations":sub.get('violations',[]),"submitted_at":sub.get('submitted_at',''),"risk_level":sub.get('risk_level','LOW'),"risk_score":sub.get('risk_score',0),"theory_results":sub.get('theory_results',[])})
+            if sc is not None: scores.append(pct); passed+=(1 if pct>=50 else 0)
+            if sub.get('violations'): flagged+=1
+    submissions.sort(key=lambda x:x.get('risk_score',0),reverse=True)
+    return render_template('exam_results.html',paper=paper,token=tok,submissions=submissions,
+        avg_score=int(sum(scores)/len(scores)) if scores else 0,flagged_count=flagged,pass_count=passed)
+
+
+@app.route('/classroom/<token>/exam/<exam_id>/export-csv')
+@require_role('admin')
+def export_exam_csv(token, exam_id):
+    if not owned_classroom(token, session['user_email']): return "Access Denied", 403
+    import csv, io
+    tok=token.upper()
+    paper=next((e for e in EXAM_PAPERS_DATABASE.get(tok,[]) if e['id']==exam_id),None)
+    if not paper: return "Not found.",404
+    output=io.StringIO(); writer=csv.writer(output)
+    writer.writerow(["Student","Email","Score","Total","Percentage","Violations","Risk Level","Risk Score","Submitted"])
+    for email,subs in EXAM_SUBMISSIONS_DB.items():
+        if exam_id in subs and not exam_id.endswith('_key'):
+            sub=subs[exam_id]; sc=sub.get('score',''); tot=sub.get('total','')
+            pct=f"{int(sc/tot*100)}%" if sc is not None and tot else "N/A"
+            name=USER_DATABASE.get(email,{}).get('full_name','')
+            writer.writerow([name,email,sc,tot,pct,len(sub.get('violations',[])),sub.get('risk_level',''),sub.get('risk_score',''),sub.get('submitted_at','')])
+    from flask import Response
+    return Response(output.getvalue(),mimetype="text/csv",headers={"Content-Disposition":f"attachment; filename=results_{exam_id}.csv"})
+
+
+@app.route('/my-results')
+@require_role('student')
+def my_results():
+    email = session['user_email']
+    results=[{"exam_id":eid,"exam_title":sub.get("exam_title",""),"token":sub.get("token",""),"score":sub.get("score"),"total":sub.get("total"),"violations":sub.get("violations",[]),"submitted_at":sub.get("submitted_at",""),"risk_level":sub.get("risk_level","LOW"),"risk_score":sub.get("risk_score",0),"theory_results":sub.get("theory_results",[])}
+              for eid,sub in EXAM_SUBMISSIONS_DB.get(email,{}).items() if not eid.endswith('_key')]
+    results.sort(key=lambda x:x["submitted_at"],reverse=True)
+    return render_template('my_results.html',student_email=email,results=results)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=5000)

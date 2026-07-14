@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}ML Exams — {{ classroom.name }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h3 class="fw-bold mb-0">🧠 ML Analysis — {{ classroom.name }}</h3>
+      <span class="text-muted small">Token: <code>{{ token }}</code> · {{ papers|length }} exam(s)</span>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/ml-dashboard" class="btn btn-outline-secondary btn-sm">← ML Dashboard</a>
+      <a href="/classroom/{{ token }}" class="btn btn-outline-primary btn-sm">Classroom →</a>
+    </div>
+  </div>
+
+  {% if not papers %}
+  <div class="alert alert-info">No exams in this classroom yet. <a href="/classroom/{{ token }}">Create one →</a></div>
+  {% endif %}
+
+  {% for paper in papers %}{% if paper.type == 'bank' %}
+  <div class="alert alert-success d-flex align-items-center gap-3 mb-3">
+    <span style="font-size:1.6rem">🎲</span>
+    <div>
+      <strong>Question Bank Active</strong> — <em>{{ paper.title }}</em> delivers
+      a unique shuffled subset to every student. No two students see the same paper.
+    </div>
+  </div>
+  {% endif %}{% endfor %}
+
+  {% for paper in papers %}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <span class="fw-bold">{{ paper.title }}</span>
+        <span class="badge ms-2
+          {% if paper.type == 'mcq' %}bg-primary
+          {% elif paper.type == 'bank' %}bg-success
+          {% elif paper.type == 'theory' %}bg-warning text-dark
+          {% else %}bg-secondary{% endif %}">
+          {{ paper.type|upper }}
+        </span>
+        {% if paper.type == 'bank' %}<span class="badge bg-info text-dark ms-1">🎲 Randomized</span>{% endif %}
+        {% if paper.type == 'theory' %}<span class="badge bg-warning text-dark ms-1">📝 Keyword Graded</span>{% endif %}
+      </div>
+      <small class="text-muted">{{ paper.get('duration_minutes',60) }} min · {{ paper._submission_count }} submission(s)</small>
+    </div>
+
+    <div class="card-body">
+      <div class="row g-2 align-items-center">
+        <div class="col-md-6">
+          <p class="mb-1 small text-muted">Start: {{ paper.get('start_time','Not set').replace('T',' ') }}</p>
+          {% if paper.type == 'bank' %}
+          <p class="mb-1 small"><strong>Bank size:</strong> {{ paper.questions|length }} questions · <strong>Per student:</strong> {{ paper.get('select_count', 60) }} selected</p>
+          <p class="mb-0 small text-success">✓ Each student gets a unique shuffled set — options also shuffled per student</p>
+          {% elif paper.type == 'theory' %}
+          <p class="mb-0 small text-warning">📝 NLP keyword matching + TF-IDF similarity scoring</p>
+          {% else %}
+          <p class="mb-0 small text-muted">Standard MCQ — same questions for all students</p>
+          {% endif %}
+        </div>
+        <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
+          <a href="/ml-dashboard/exam/{{ paper.id }}" class="btn btn-danger btn-sm">🚨 Risk Analysis</a>
+          {% if paper.type == 'bank' %}
+          <button class="btn btn-success btn-sm" onclick="loadBankStats('{{ token }}','{{ paper.id }}')">🎲 Bank Stats</button>
+          {% endif %}
+          {% if paper.type == 'theory' %}
+          <button class="btn btn-warning btn-sm" onclick="showTheoryGrader('{{ paper.id }}')">📝 Grade an Answer</button>
+          {% endif %}
+          <a href="/classroom/{{ token }}/exam/{{ paper.id }}/results" class="btn btn-outline-info btn-sm">📊 Results</a>
+          <a href="/classroom/{{ token }}/exam/{{ paper.id }}/export-csv" class="btn btn-outline-secondary btn-sm">⬇ CSV</a>
+        </div>
+      </div>
+
+      {% if paper.type == 'bank' %}
+      <div id="bank-stats-{{ paper.id }}" class="mt-3 d-none">
+        <hr>
+        <div class="row g-2" id="bank-stats-content-{{ paper.id }}">
+          <div class="col-12 text-muted small">Loading bank stats...</div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if paper.type == 'theory' %}
+      <div id="theory-panel-{{ paper.id }}" class="mt-3 d-none">
+        <hr>
+        <h6 class="fw-bold">📝 Theory Answer Grader — Test a student answer</h6>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Student Answer</label>
+            <textarea id="th-student-{{ paper.id }}" class="form-control form-control-sm" rows="4" placeholder="Paste student's answer..."></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Model Answer</label>
+            <textarea id="th-model-{{ paper.id }}" class="form-control form-control-sm" rows="4" placeholder="Expected / ideal answer..."></textarea>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label small fw-bold">Keywords (comma-separated — must appear in answer)</label>
+            <input id="th-kw-{{ paper.id }}" class="form-control form-control-sm" placeholder="e.g. TCP, handshake, SYN, reliable, connection">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold">Max Marks</label>
+            <input type="number" id="th-marks-{{ paper.id }}" class="form-control form-control-sm" value="10" min="1">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-warning btn-sm w-100" onclick="gradeTheoryAnswer('{{ paper.id }}')">Grade →</button>
+          </div>
+        </div>
+        <div id="theory-result-{{ paper.id }}" class="mt-3"></div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<script>
+async function loadBankStats(token, examId) {
+  const panel = document.getElementById(`bank-stats-${examId}`);
+  const content = document.getElementById(`bank-stats-content-${examId}`);
+  panel.classList.toggle('d-none');
+  if (panel.classList.contains('d-none')) return;
+  content.innerHTML = '<div class="text-muted small">Loading...</div>';
+  try {
+    const r = await fetch(`/api/ml/question-bank-stats/${token}/${examId}`);
+    const d = await r.json();
+    if (d.error) { content.innerHTML = `<div class="text-danger small">${d.error}</div>`; return; }
+    let html = `<div class="col-md-4"><div class="card border-success"><div class="card-body text-center py-2">
+      <div class="fs-3 fw-bold text-success">${d.total_questions}</div>
+      <div class="small text-muted">Total Questions in Bank</div></div></div></div>`;
+    if (d.categories) {
+      html += `<div class="col-md-4"><div class="card"><div class="card-body py-2">
+        <div class="small fw-bold mb-1">By Category</div>
+        ${Object.entries(d.categories).map(([k,v])=>`<div class="d-flex justify-content-between small"><span>${k}</span><span class="badge bg-secondary">${v}</span></div>`).join('')}
+      </div></div></div>`;
+    }
+    if (d.by_difficulty) {
+      const cols = {easy:'success',medium:'warning',hard:'danger'};
+      html += `<div class="col-md-4"><div class="card"><div class="card-body py-2">
+        <div class="small fw-bold mb-1">By Difficulty</div>
+        ${Object.entries(d.by_difficulty).map(([k,v])=>`<div class="d-flex justify-content-between small"><span class="text-${cols[k]||'secondary'}">${k}</span><span class="badge bg-${cols[k]||'secondary'}">${v}</span></div>`).join('')}
+      </div></div></div>`;
+    }
+    content.innerHTML = html;
+  } catch(e) { content.innerHTML = `<div class="text-danger small">Error: ${e.message}</div>`; }
+}
+
+function showTheoryGrader(examId) {
+  document.getElementById(`theory-panel-${examId}`).classList.toggle('d-none');
+}
+
+async function gradeTheoryAnswer(examId) {
+  const studentAns = document.getElementById(`th-student-${examId}`).value;
+  const modelAns = document.getElementById(`th-model-${examId}`).value;
+  const keywords = document.getElementById(`th-kw-${examId}`).value.split(',').map(k=>k.trim()).filter(Boolean);
+  const maxMarks = parseFloat(document.getElementById(`th-marks-${examId}`).value) || 10;
+  const resultDiv = document.getElementById(`theory-result-${examId}`);
+  if (!studentAns || !modelAns) { resultDiv.innerHTML='<div class="alert alert-warning small">Enter both answers first.</div>'; return; }
+  resultDiv.innerHTML='<div class="text-muted small">Grading...</div>';
+  try {
+    const r = await fetch('/api/ml/grade-theory', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({student_answer:studentAns, model_answer:modelAns, keywords, max_marks:maxMarks})
+    });
+    const d = await r.json();
+    if (d.error) { resultDiv.innerHTML=`<div class="alert alert-danger small">${d.error}</div>`; return; }
+    const gc = {Excellent:'success',Good:'primary',Adequate:'info',Poor:'warning','Very Poor':'danger'}[d.grade_label]||'secondary';
+    resultDiv.innerHTML = `
+    <div class="card border-${gc}">
+      <div class="card-header bg-${gc} text-white d-flex justify-content-between">
+        <strong>${d.grade_label}</strong>
+        <span>${d.marks_awarded}/${d.max_marks} marks (${d.percentage}%)</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3">
+          ${[['Keywords',d.keyword_score*100,'warning'],['Similarity',d.similarity_score*100,'info'],['Length',d.length_score*100,'primary'],['Structure',d.structure_score*100,'secondary']].map(([l,v,c])=>`
+          <div class="col-6 col-md-3 text-center">
+            <div class="fw-bold text-${c}">${Math.round(v)}%</div>
+            <div class="small text-muted">${l}</div>
+            <div class="progress mt-1" style="height:4px"><div class="progress-bar bg-${c}" style="width:${v}%"></div></div>
+          </div>`).join('')}
+        </div>
+        ${d.keywords_found.length?`<div class="mb-2 small"><strong class="text-success">✓ Found: </strong>${d.keywords_found.map(k=>`<span class="badge bg-success me-1">${k}</span>`).join('')}</div>`:''}
+        ${d.keywords_missing.length?`<div class="mb-2 small"><strong class="text-danger">✗ Missing: </strong>${d.keywords_missing.map(k=>`<span class="badge bg-danger me-1">${k}</span>`).join('')}</div>`:''}
+        ${d.strong_points.length?`<div class="mb-1 small"><strong class="text-success">Strong: </strong>${d.strong_points.map(p=>`<div>✓ ${p}</div>`).join('')}</div>`:''}
+        ${d.weak_points.length?`<div class="mb-1 small"><strong class="text-warning">Improve: </strong>${d.weak_points.map(p=>`<div>⚠ ${p}</div>`).join('')}</div>`:''}
+        <div class="mt-2 p-2 bg-light rounded small"><strong>Explanation:</strong><pre style="white-space:pre-wrap;font-size:.8rem" class="mb-0">${d.explanation}</pre></div>
+      </div>
+    </div>`;
+  } catch(e) { resultDiv.innerHTML=`<div class="alert alert-danger small">Error: ${e.message}</div>`; }
+}
+</script>
+{% endblock %}
